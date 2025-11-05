@@ -1,5 +1,7 @@
-streamlit
+fastapi
+uvicorn[standard]
 agno
 openai
 icalendar
 google-search-results
+python-multipart

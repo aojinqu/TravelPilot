@@ -1,36 +1,92 @@
-## TravelPilot: A LLM-Based Agent for customized Travlling  
+## TravelPilot: A LLM-Based Agent for customized Travelling  
 
-### Requirements
+一个使用 React 前端和 FastAPI 后端的 AI 旅行规划器，支持通过 MCP 服务器访问实时数据。
 
-1. **API Keys** (Both Required):
-    - **OpenAI API Key**: Get your API key from [OpenAI Platform](https://platform.openai.com/api-keys)
-    - **Google Maps API Key**: Get your API key from [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+### 功能特性
 
-2. **Python 3.8+**: Ensure you have Python 3.8 or higher installed.
+- 🏨 **实时 Airbnb 数据**：使用 Airbnb MCP 服务器获取真实的住宿信息和价格
+- 🗺️ **Google Maps 集成**：精确计算距离和旅行时间
+- 🔍 **实时网络搜索**：获取最新的旅行信息、评论和更新
+- 📅 **日历导出**：将行程导出为 ICS 文件，可导入 Google Calendar、Apple Calendar 或 Outlook
+- ⚡ **现代化前端**：使用 React 构建的响应式用户界面
 
-3. **MCP Servers**: The app automatically connects to:
-    - **Airbnb MCP Server**: Provides real Airbnb listings and pricing data
-    - **Custom Google Maps MCP**: Enables precise distance calculations and location services
+### 系统要求
 
-### Installation
+1. **API Keys** (两者都需要):
+    - **OpenAI API Key**: 从 [OpenAI Platform](https://platform.openai.com/api-keys) 获取
+    - **Google Maps API Key**: 从 [Google Cloud Console](https://console.cloud.google.com/apis/credentials) 获取
 
-1. Install the required Python packages:
-   ```bash
-   pip install -r requirements.txt
-   ```
+2. **Python 3.8+**: 确保已安装 Python 3.8 或更高版本
 
-### Running the App
+3. **Node.js 16+**: 用于运行 React 前端（建议使用 npm 或 yarn）
 
-1. Start the Streamlit app:
-   ```bash
-   streamlit run app.py
-   ```
+4. **MCP Servers**: 应用会自动连接到:
+    - **Airbnb MCP Server**: 提供真实的 Airbnb 房源和价格数据
+    - **Custom Google Maps MCP**: 实现精确的距离计算和位置服务
 
-2. In the app interface:
-   - Enter your **OpenAI API key** in the sidebar
-   - Enter your **Google Maps API key** in the sidebar
-   - Specify your destination, trip duration, budget, and preferences
-   - Click "🎯 Generate Itinerary" to create your detailed travel plan
+### 快速开始
 
-3. **Optional**: Download your itinerary as a calendar file (.ics) for import into Google Calendar, Apple Calendar, or Outlook
+#### 1. 安装 Python 依赖
+
+```bash
+pip install -r requirements.txt
+```
+
+#### 2. 安装 Node.js 依赖
+
+```bash
+cd frontend
+npm install
+cd ..
+```
+
+#### 3. 启动应用
+
+**终端 1 - 启动后端服务器：**
+```bash
+python backend.py
+```
+后端将在 http://localhost:8000 运行
+
+**终端 2 - 启动前端开发服务器：**
+```bash
+cd frontend
+npm run dev
+```
+前端将在 http://localhost:3000 运行
+
+#### 4. 使用应用
+
+1. 在浏览器中访问 http://localhost:3000
+2. 在左侧边栏输入您的 **OpenAI API key** 和 **Google Maps API key**
+3. 填写旅行信息（目的地、天数、预算、偏好等）
+4. 点击"🎯 生成行程"按钮创建详细的旅行计划
+5. （可选）点击"📅 下载为日历"导出 ICS 文件
+
+### 项目结构
+
+```
+final_project/
+├── backend.py          # FastAPI 后端服务器
+├── frontend/           # React 前端应用
+│   ├── src/
+│   │   ├── App.jsx     # 主应用组件
+│   │   └── ...
+│   └── package.json    # Node.js 依赖
+├── requirements.txt    # Python 依赖
+└── README.md          # 项目说明
+```
+
+### 详细设置说明
+
+请参考 [SETUP.md](./SETUP.md) 获取详细的设置和故障排除指南。
+
+### 旧版本（Streamlit）
+
+如果您需要使用旧版本的 Streamlit 前端，可以使用 `app.py` 文件：
+```bash
+streamlit run app.py
+```
+
+注意：`app.py` 是旧版本的 Streamlit 实现，新版本使用 React 前端。
 
