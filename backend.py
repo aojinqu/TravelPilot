@@ -73,9 +73,10 @@ def generate_ics_content(plan_text: str, start_date: datetime = None) -> bytes:
 
     return cal.to_ical()
 
+
 async def run_mcp_travel_planner(destination: str, num_days: int, preferences: str, budget: int, openai_key: str, google_maps_key: str):
     """Run the MCP-based travel planner agent with real-time data access."""
-    ## for test
+    # for test
     print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
     try:
         # Set Google Maps API key environment variable
@@ -107,43 +108,12 @@ async def run_mcp_travel_planner(destination: str, num_days: int, preferences: s
             api_key=openai_key,
             base_url="https://openrouter.ai/api/v1"
             ),
-            # description=dedent(
-            #     """
-            #     You are a professional travel consultant AI that creates highly detailed travel itineraries directly without asking questions.
-
-            #     You have access to:
-            #     🏨 Airbnb listings with real availability and current pricing
-            #     🗺️ Google Maps MCP for location services, directions, distance calculations, and local navigation
-            #     🔍 Web search capabilities for current information
-
-            #     ALWAYS create a complete, detailed itinerary.
-            #     """
-            # ),
-            # instructions=[
-            #     "Find suitable accommodation options within the budget using Airbnb MCP with real prices and availability",
-            #     "Create an extremely detailed day-by-day itinerary with specific activities, locations, exact timing, and distances",
-            #     "Use Google Maps MCP extensively to calculate distances between ALL locations and provide travel times",
-            #     "Include detailed transportation options and turn-by-turn navigation tips using Google Maps MCP",
-            #     "Add practical information including local transportation costs, currency exchange, safety tips, and cultural norms",
-            #     "Use all available tools proactively without asking for permission",
-            # ],
             tools=[mcp_tools, GoogleSearchTools()],
             markdown=True
         )
         print("Success create Agent")
 
         # Create the planning prompt
-        # prompt=f"""
-        # IMMEDIATELY create an extremely detailed and comprehensive travel itinerary for:
-
-        # **Destination:** {destination}
-        # **Duration:** {num_days} days
-        # **Budget:** ${budget} USD total
-        # **Preferences:** {preferences}
-        
-        # # **REQUIRED OUTPUT FORMAT:**
-        # # **Trip Overview** - Summary, total estimated cost breakdown, detailed weather forecast.Use Google Maps MCP for ALL distance calculations and location services, and web search for current information.        
-        # """
         prompt = f"""
         You are a professional travel consultant AI that creates highly detailed travel itineraries directly without asking questions.
 
@@ -156,7 +126,7 @@ async def run_mcp_travel_planner(destination: str, num_days: int, preferences: s
 
         **Destination:** {destination}
         **Duration:** {num_days} days
-        **Budget:** ${budget} USD total
+        **Budget:** ${budget} HKD total
         **Preferences:** {preferences}
 
         DO NOT ask any questions. Generate a complete, highly detailed itinerary now using all available tools.
@@ -168,21 +138,46 @@ async def run_mcp_travel_planner(destination: str, num_days: int, preferences: s
         - Include opening hours, ticket prices, and best visiting times for all attractions
 
         **REQUIRED OUTPUT FORMAT:**
-        1. **Trip Overview** - Summary, total estimated cost breakdown, detailed weather forecast
-        2. **Accommodation** - 3 specific Airbnb options with real prices, addresses, amenities, and distance from city center
-        3. **Transportation Overview** - Detailed transportation options, costs, and recommendations
-        4. **Day-by-Day Itinerary** - Extremely detailed schedule with:
-           - Specific start/end times for each activity
-           - Exact distances and travel times between locations (use Google Maps MCP)
-           - Detailed descriptions of each location with addresses
-           - Opening hours, ticket prices, and best visiting times
-           - Estimated costs for each activity and transportation
-           - Buffer time between activities for unexpected delays
+        1. **Trip Overview** - Summary about this trip including main scenic spots.
+        2. **Accommodation** - 3 specific Airbnb options with real prices, addresses, amenities, links
+        3. **Day-by-Day Itinerary** - Extremely detailed schedule with:
+           - For each day, include:
+             - Start and end times for each activity (e.g., 12:00am-1:15am)
+             - Activity names and descriptions with detailed addresses
+             - Cost breakdown for each activity (e.g., cost: $100)
+             - Include exact distances and travel times between locations (use Google Maps MCP)(e.g., car:15min)
+             - Mention the opening hours, ticket prices, and the best visiting times for each location
+           - Continue this format for each day of the trip (e.g., Day 1, Day 2, etc.)
 
         Use Airbnb MCP for real accommodation data, Google Maps MCP for ALL distance calculations and location services, and web search for current information.
+        
         """
 
         response = await travel_planner.arun(prompt)
+
+    # # 打开 r.md 文件并读取其内容
+    # with open('input.md', 'r', encoding='utf-8') as file:
+    #     response = file.read()
+
+
+    # # 以下代码用于测试
+    # with open('response_content.md', 'a', encoding='utf-8') as file:
+    #     # file.write(response.content+ '\n')
+
+    #     # 正则表达式匹配每一部分的标题和内容
+    #     pattern = r"##\s*(.*?)\s*(?=\n##|\Z)"  # 匹配所有以 "##" 开头的标题和其后的内容
+    #     matches = re.findall(pattern, response, re.DOTALL)
+
+    #     # 打印每一部分的标题和内容
+    #     with open('response_content.md', 'a', encoding='utf-8') as file:
+    #         for match in matches:
+    #             title, content = match.split("\n", 1)  # 分割标题和内容
+    #             file.write(f"Title: {title}\n")
+    #             file.write(f"Content:\n{content.strip()}\n")
+    #             file.write("——" * 30 + "\n")
+
+    # print("回答已追加到文件")
+    # return response
         return response.content
 
     finally:

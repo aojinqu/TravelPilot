@@ -1,68 +1,124 @@
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import axios from 'axios'
-import ReactMarkdown from 'react-markdown'
+import ChatBot from './components/ChatBot'
+import ItineraryDetails from './components/ItineraryDetails'
 import './App.css'
 
 const API_BASE_URL = 'http://localhost:8000'
 
 function App() {
-  const [openaiKey, setOpenaiKey] = useState('')
-  const [googleMapsKey, setGoogleMapsKey] = useState('')
   const [destination, setDestination] = useState('')
-  const [numDays, setNumDays] = useState(7)
+  const [numDays, setNumDays] = useState(3)
   const [budget, setBudget] = useState(2000)
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0])
   const [preferences, setPreferences] = useState('')
-  const [quickPrefs, setQuickPrefs] = useState([])
   const [itinerary, setItinerary] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [tripTitle, setTripTitle] = useState('新旅行计划')
+  const chatBotRef = useRef(null)
 
-  const quickPrefOptions = [
-    "Adventure", "Relaxation", "Sightseeing", "Cultural Experiences",
-    "Beach", "Mountain", "Luxury", "Budget-Friendly", "Food & Dining",
-    "Shopping", "Nightlife", "Family-Friendly"
-  ]
-
-  const handleGenerate = async () => {
-    if (!destination) {
-      setError('请输入目的地')
-      return
-    }
-
-    if (!openaiKey || !googleMapsKey) {
-      setError('请输入所有必需的 API 密钥')
-      return
-    }
-
-    const allPreferences = []
-    if (preferences) allPreferences.push(preferences)
-    if (quickPrefs.length > 0) allPreferences.push(...quickPrefs)
-    const finalPreferences = allPreferences.join(', ') || 'General sightseeing'
-
+  // 处理聊天消息发送
+  const handleChatMessage = async (message) => {
     setLoading(true)
     setError(null)
 
-    try {
-      const response = await axios.post(`${API_BASE_URL}/api/generate-itinerary`, {
-        destination,
-        num_days: numDays,
-        preferences: finalPreferences,
-        budget,
-        openai_key: openaiKey,
-        google_maps_key: googleMapsKey,
-        start_date: startDate
-      })
-
-      if (response.data.success) {
-        setItinerary(response.data.itinerary)
-      } else {
-        setError('生成行程失败')
+    // 解析用户消息，提取旅行信息
+    const lowerMessage = message.toLowerCase()
+    
+    // 尝试从消息中提取目的地
+    const destinationMatch = message.match(/(?:去|想去|到)([\u4e00-\u9fa5]+|[\w\s]+)/)
+    if (destinationMatch) {
+      const extractedDest = destinationMatch[1].trim()
+      if (extractedDest && extractedDest !== destination) {
+        setDestination(extractedDest)
       }
-    } catch (err) {
-      setError(err.response?.data?.detail || err.message || '生成行程时出错')
-    } finally {
-      setLoading(false)
+    }
+
+    // 尝试提取天数
+    const daysMatch = message.match(/(\d+)\s*天/)
+    if (daysMatch) {
+      setNumDays(parseInt(daysMatch[1]))
+    }
+
+    // 尝试提取日期
+    const dateMatch = message.match(/(\d{1,2})[.\/](\d{1,2})/)
+    if (dateMatch) {
+      const month = parseInt(dateMatch[1])
+      const day = parseInt(dateMatch[2])
+      const currentYear = new Date().getFullYear()
+      const newDate = new Date(currentYear, month - 1, day)
+      if (!isNaN(newDate.getTime())) {
+        setStartDate(newDate.toISOString().split('T')[0])
+      }
+    }
+
+    // 如果消息包含旅行相关信息，尝试生成行程
+    const isTravelRelated = lowerMessage.includes('旅行') || 
+                           lowerMessage.includes('去') || 
+                           lowerMessage.includes('计划') || 
+                           lowerMessage.includes('旅游') ||
+                           destination
+    
+    if (isTravelRelated) {
+      try {
+        const finalPreferences = preferences || message
+        
+        const response = await axios.post(`${API_BASE_URL}/api/generate-itinerary`, {
+          destination: destination,
+          num_days: numDays,
+          preferences: finalPreferences,
+          budget,
+          openai_key: '', // 从环境变量获取
+          google_maps_key: '', // 从环境变量获取
+          start_date: startDate
+        })
+
+        if (response.data.success) {
+          setItinerary(response.data.itinerary)
+          
+          // 更新行程标题
+          if (destination) {
+            setTripTitle(`${destination} ${numDays}日游`)
+          }
+
+          // 添加AI回复到聊天
+          setTimeout(() => {
+            if (chatBotRef.current) {
+              chatBotRef.current.addMessage(
+                `好的！我已经为您创建了${destination || '目的地'}的${numDays}天旅行行程。详情请查看右侧的行程安排。`
+              )
+            }
+          }, 100)
+        } else {
+          setError('生成行程失败')
+          setTimeout(() => {
+            if (chatBotRef.current) {
+              chatBotRef.current.addMessage('抱歉，生成行程时遇到了问题。请稍后再试。')
+            }
+          }, 100)
+        }
+      } catch (err) {
+        const errorMsg = err.response?.data?.detail || err.message || '生成行程时出错'
+        setError(errorMsg)
+        setTimeout(() => {
+          if (chatBotRef.current) {
+            chatBotRef.current.addMessage(`抱歉，出现了错误：${errorMsg}`)
+          }
+        }, 100)
+      } finally {
+        setLoading(false)
+      }
+    } else {
+      // 普通对话，添加AI回复
+      setTimeout(() => {
+        if (chatBotRef.current) {
+          chatBotRef.current.addMessage(
+            '感谢您的消息！请告诉我您想去哪里旅行，我可以为您创建详细的行程计划。'
+          )
+        }
+        setLoading(false)
+      }, 800)
     }
   }
 
@@ -95,185 +151,27 @@ function App() {
 
   return (
     <div className="app">
-      <div className="container">
-        <header className="header">
-          <h1>✈️ MCP AI Travel Planner</h1>
-          <p className="subtitle">使用 MCP 服务器进行实时数据访问的 AI 旅行规划器</p>
-        </header>
+      <div className="app-layout">
+        {/* 左侧聊天界面 */}
+        <div className="chat-panel">
+          <ChatBot
+            ref={chatBotRef}
+            onSendMessage={handleChatMessage}
+            loading={loading}
+            tripTitle={tripTitle}
+          />
+        </div>
 
-        <div className="layout">
-          <aside className="sidebar">
-            <h2>🔑 API 密钥配置</h2>
-            <div className="warning-box">
-              <strong>⚠️ 这些服务需要 API 密钥：</strong>
-            </div>
-
-            <div className="input-group">
-              <label htmlFor="openai-key">OpenAI API Key</label>
-              <input
-                id="openai-key"
-                type="password"
-                value={openaiKey}
-                onChange={(e) => setOpenaiKey(e.target.value)}
-                placeholder="Required for AI planning"
-              />
-            </div>
-
-            <div className="input-group">
-              <label htmlFor="google-maps-key">Google Maps API Key</label>
-              <input
-                id="google-maps-key"
-                type="password"
-                value={googleMapsKey}
-                onChange={(e) => setGoogleMapsKey(e.target.value)}
-                placeholder="Required for location services"
-              />
-            </div>
-
-            {(openaiKey && googleMapsKey) ? (
-              <div className="success-message">✅ 所有 API 密钥已配置！</div>
-            ) : (
-              <div className="info-box">
-                <strong>必需的 API 密钥：</strong>
-                <ul>
-                  <li><strong>OpenAI API Key</strong>: https://platform.openai.com/api-keys</li>
-                  <li><strong>Google Maps API Key</strong>: https://console.cloud.google.com/apis/credentials</li>
-                </ul>
-              </div>
-            )}
-          </aside>
-
-          <main className="main-content">
-            {(openaiKey && googleMapsKey) ? (
-              <>
-                <section className="trip-details">
-                  <h2>🌍 旅行详情</h2>
-                  <div className="form-grid">
-                    <div className="input-group">
-                      <label htmlFor="destination">目的地</label>
-                      <input
-                        id="destination"
-                        type="text"
-                        value={destination}
-                        onChange={(e) => setDestination(e.target.value)}
-                        placeholder="例如：巴黎、东京、纽约"
-                      />
-                    </div>
-
-                    <div className="input-group">
-                      <label htmlFor="num-days">天数</label>
-                      <input
-                        id="num-days"
-                        type="number"
-                        value={numDays}
-                        onChange={(e) => setNumDays(parseInt(e.target.value))}
-                        min="1"
-                        max="30"
-                      />
-                    </div>
-
-                    <div className="input-group">
-                      <label htmlFor="budget">预算 (USD)</label>
-                      <input
-                        id="budget"
-                        type="number"
-                        value={budget}
-                        onChange={(e) => setBudget(parseInt(e.target.value))}
-                        min="100"
-                        max="10000"
-                        step="100"
-                      />
-                    </div>
-
-                    <div className="input-group">
-                      <label htmlFor="start-date">开始日期</label>
-                      <input
-                        id="start-date"
-                        type="date"
-                        value={startDate}
-                        onChange={(e) => setStartDate(e.target.value)}
-                        min={new Date().toISOString().split('T')[0]}
-                      />
-                    </div>
-                  </div>
-                </section>
-
-                <section className="preferences">
-                  <h3>🎯 旅行偏好</h3>
-                  <div className="input-group">
-                    <label htmlFor="preferences">描述您的旅行偏好</label>
-                    <textarea
-                      id="preferences"
-                      value={preferences}
-                      onChange={(e) => setPreferences(e.target.value)}
-                      placeholder="例如：冒险活动、文化景点、美食、放松、夜生活..."
-                      rows="4"
-                    />
-                  </div>
-
-                  <div className="input-group">
-                    <label htmlFor="quick-prefs">快速偏好（可选）</label>
-                    <div className="checkbox-group">
-                      {quickPrefOptions.map((option) => (
-                        <label key={option} className="checkbox-label">
-                          <input
-                            type="checkbox"
-                            checked={quickPrefs.includes(option)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setQuickPrefs([...quickPrefs, option])
-                              } else {
-                                setQuickPrefs(quickPrefs.filter(p => p !== option))
-                              }
-                            }}
-                          />
-                          {option}
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                </section>
-
-                <div className="button-group">
-                  <button
-                    className="btn btn-primary"
-                    onClick={handleGenerate}
-                    disabled={loading || !destination}
-                  >
-                    {loading ? '🔄 生成中...' : '🎯 生成行程'}
-                  </button>
-
-                  {itinerary && (
-                    <button
-                      className="btn btn-secondary"
-                      onClick={handleDownloadCalendar}
-                    >
-                      📅 下载为日历
-                    </button>
-                  )}
-                </div>
-
-                {error && (
-                  <div className="error-message">
-                    ❌ {error}
-                  </div>
-                )}
-
-                {itinerary && (
-                  <section className="itinerary">
-                    <h2>📋 您的旅行行程</h2>
-                    <div className="itinerary-content">
-                      <ReactMarkdown>{itinerary}</ReactMarkdown>
-                    </div>
-                  </section>
-                )}
-              </>
-            ) : (
-              <div className="warning-message">
-                ⚠️ 请先输入所有 API 密钥以使用旅行规划器。
-              </div>
-            )}
-          </main>
+        {/* 右侧行程详情 */}
+        <div className="itinerary-panel">
+          <ItineraryDetails
+            itinerary={itinerary}
+            startDate={startDate}
+            numDays={numDays}
+            budget={budget}
+            destination={destination}
+            onDownloadCalendar={handleDownloadCalendar}
+          />
         </div>
       </div>
     </div>
@@ -281,5 +179,3 @@ function App() {
 }
 
 export default App
-
-
