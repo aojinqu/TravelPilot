@@ -1,5 +1,3 @@
-streamlit
-agno
-openai
-icalendar
-google-search-results
+fastapi
+uvicorn[standard]
+pydantic
