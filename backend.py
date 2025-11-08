@@ -11,7 +11,8 @@ import os
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional
+from typing import List, Optional
+
 
 app = FastAPI(title="MCP AI Travel Planner API")
 
@@ -74,10 +75,10 @@ def generate_ics_content(plan_text: str, start_date: datetime = None) -> bytes:
     return cal.to_ical()
 
 
-async def run_mcp_travel_planner(destination: str, num_days: int, preferences: str, budget: int, openai_key: str, google_maps_key: str):
+async def run_mcp_travel_planner(destination: str, num_days: int, num_people: int, budget: int, openai_key: str, google_maps_key: str):
     """Run the MCP-based travel planner agent with real-time data access."""
     # for test
-    print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
+    print("@@@@@@@@@@@@@@@@  Start  @@@@@@@@@@@@@@@@@@@@@@@@")
     try:
         # Set Google Maps API key environment variable
         os.environ["GOOGLE_MAPS_API_KEY"] = google_maps_key
@@ -94,7 +95,7 @@ async def run_mcp_travel_planner(destination: str, num_days: int, preferences: s
             env={
                 "GOOGLE_MAPS_API_KEY": google_maps_key,
             },
-            timeout_seconds=60,
+            timeout_seconds=100,
         )
 
         # Connect to Airbnb MCP server
@@ -126,8 +127,8 @@ async def run_mcp_travel_planner(destination: str, num_days: int, preferences: s
 
         **Destination:** {destination}
         **Duration:** {num_days} days
-        **Budget:** ${budget} HKD total
-        **Preferences:** {preferences}
+        **People:** {num_people} 
+        **Total Budget:** ${budget} HKD
 
         DO NOT ask any questions. Generate a complete, highly detailed itinerary now using all available tools.
 
@@ -154,30 +155,9 @@ async def run_mcp_travel_planner(destination: str, num_days: int, preferences: s
         """
 
         response = await travel_planner.arun(prompt)
+        # test
+        print(response.content)
 
-    # # 打开 r.md 文件并读取其内容
-    # with open('input.md', 'r', encoding='utf-8') as file:
-    #     response = file.read()
-
-
-    # # 以下代码用于测试
-    # with open('response_content.md', 'a', encoding='utf-8') as file:
-    #     # file.write(response.content+ '\n')
-
-    #     # 正则表达式匹配每一部分的标题和内容
-    #     pattern = r"##\s*(.*?)\s*(?=\n##|\Z)"  # 匹配所有以 "##" 开头的标题和其后的内容
-    #     matches = re.findall(pattern, response, re.DOTALL)
-
-    #     # 打印每一部分的标题和内容
-    #     with open('response_content.md', 'a', encoding='utf-8') as file:
-    #         for match in matches:
-    #             title, content = match.split("\n", 1)  # 分割标题和内容
-    #             file.write(f"Title: {title}\n")
-    #             file.write(f"Content:\n{content.strip()}\n")
-    #             file.write("——" * 30 + "\n")
-
-    # print("回答已追加到文件")
-    # return response
         return response.content
 
     finally:
@@ -186,18 +166,18 @@ async def run_mcp_travel_planner(destination: str, num_days: int, preferences: s
 # Request models
 class TravelPlanRequest(BaseModel):
     destination: str
+    departure: str
     num_days: int
-    preferences: str
-    budget: int
-    openai_key: str
-    google_maps_key: str
-    start_date: Optional[str] = None
+    num_people: int
+    # preferences: str
+    budget: float
+    # start_date: Optional[str] = None
 
 @app.get("/")
 async def root():
     return {"message": "MCP AI Travel Planner API"}
 
-@app.post("/api/generate-itinerary")
+
 async def generate_itinerary(request: TravelPlanRequest):
     """
     生成旅行行程
@@ -208,7 +188,7 @@ async def generate_itinerary(request: TravelPlanRequest):
         itinerary = await run_mcp_travel_planner(
             destination=request.destination,
             num_days=request.num_days,
-            preferences=request.preferences,
+            num_people=request.num_people,
             budget=request.budget,
             openai_key=openai_key,
             google_maps_key=googlemap_key
@@ -223,8 +203,7 @@ async def generate_itinerary(request: TravelPlanRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"生成行程时出错: {str(e)}")
-        import traceback
-        traceback.print_exc()
+
 
 @app.post("/api/download-calendar")
 async def download_calendar(request: dict):
@@ -260,6 +239,167 @@ async def download_calendar(request: dict):
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"生成日历文件时出错: {str(e)}")
+
+
+
+
+# --- 请求体 ---
+class TravelInfo(BaseModel):
+    destination: str
+    departure: str
+    num_days: int
+    num_people: int
+    budget: float
+
+class ChatRequest(BaseModel):
+    message: str
+    vibe: Optional[List[str]] = None
+    chat_history: Optional[List[dict]] = None  # (可选) 用于上下文
+    travel_info:Optional[TravelInfo] = None
+
+# --- 响应体 (与 UI 完全匹配) ---
+
+
+class TripOverview(BaseModel):
+    title: str
+    image_url: str
+    location: str
+    country: str
+    date_range: str
+    description: str
+
+
+class Flight(BaseModel):
+    origin: str
+    destination: str
+    departure_time: str
+    departure_date: str
+    arrival_time: str
+    arrival_date: str
+    duration: str
+    airline: str
+    airline_logo_url: str  # UI 上的航空公司 Logo
+    nonstop: bool
+
+
+class Hotel(BaseModel):
+    name: str
+    image_url: str
+    rating: float
+    review_count: int
+    price_per_night: int
+    currency: str
+
+
+class PriceSummary(BaseModel):
+    flights_total: int
+    hotels_total: int
+    grand_total: int
+    currency: str
+
+
+class ItineraryResponse(BaseModel):
+    ai_response: str
+    trip_overview: TripOverview
+    flights: List[Flight]
+    hotels: List[Hotel]
+    price_summary: PriceSummary
+
+
+# -----------------------------------------------
+# 4. 创建 API 终结点 (Endpoint)
+# -----------------------------------------------
+@app.post("/api/chat", response_model=ItineraryResponse)
+async def handle_chat(request: ChatRequest):
+
+    print(f"✅ 收到前端消息: {request.message}")
+    if request.vibe:
+        print(f"✅ 收到 Vibe: {request.vibe}")
+    if request.travel_info:
+        print(f"✅ 收到 Travel Info: {request.travel_info}")        
+
+    # --- 这是模拟数据 (Mock Data) ---
+    # 你的 AI (Gemini / GPT) 和 RAG 流程最终会生成这些数据。
+    # 现在，我们先返回图片中的内容。
+
+    mock_overview = TripOverview(
+        title="Winter Feasts in Osaka's Food Paradise",
+        image_url="https://example.com/images/osaka_castle.jpg",  # 替换为真实的图片 URL
+        location="Osaka",
+        country="Japan",
+        date_range="Feb 6 - 12",
+        description="Dive into thrills at Universal Studios Japan, silver street food and noon at Dotonbori, and most sacred door at Na..."
+    )
+
+    mock_flights = [
+        Flight(
+            origin="Hong Kong",
+            destination="Osaka",
+            departure_time="14:55",
+            departure_date="Feb 6",
+            arrival_time="19:20",
+            arrival_date="Feb 6",
+            duration="3h25m",
+            airline="Cathay Pacific",
+            airline_logo_url="https://example.com/logo/cx.png",  # 替换为 Logo URL
+            nonstop=True
+        ),
+        Flight(
+            origin="Osaka",
+            destination="Hong Kong",
+            departure_time="09:55",
+            departure_date="Feb 12",
+            arrival_time="13:20",
+            arrival_date="Feb 12",
+            duration="4h25m",
+            airline="HK Express",
+            airline_logo_url="https://example.com/logo/hk.png",  # 替换为 Logo URL
+            nonstop=True
+        )
+    ]
+
+    mock_hotels = [
+        Hotel(
+            name="The Royal Park Hotel Iconic Osaka Midosuji",
+            image_url="https://example.com/images/hotel_room.jpg",  # 替换为真实的图片 URL
+            rating=4.7,
+            review_count=1234,
+            price_per_night=37,  # (221 / 6 nights ≈ 37 per night)
+            currency="SGD"
+        )
+    ]
+
+    mock_price = PriceSummary(
+        flights_total=332,
+        hotels_total=221,
+        grand_total=554,  # 332 + 221
+        currency="SGD"
+    )
+
+    mock_ai_response = "Osaka in February - plum blossoms and amazing winter comfort food! Here are some incredible experiences waiting for you in Japan's kitchen."
+    
+    travel_info=request.travel_info
+
+    print(travel_info)
+
+    response = await generate_itinerary(
+        TravelPlanRequest(
+            destination=travel_info.destination,
+            departure=travel_info.departure,
+            num_days=travel_info.num_days, 
+            num_people=travel_info.num_people, 
+            budget=travel_info.budget
+        )
+    )
+
+    # --- 返回完整的响应 ---
+    return ItineraryResponse(
+        ai_response=response.get("itinerary"),
+        trip_overview=mock_overview,
+        flights=mock_flights,
+        hotels=mock_hotels,
+        price_summary=mock_price
+    )
 
 if __name__ == "__main__":
     import uvicorn

@@ -81,12 +81,5 @@ final_project/
 
 请参考 [SETUP.md](./SETUP.md) 获取详细的设置和故障排除指南。
 
-### 旧版本（Streamlit）
 
-如果您需要使用旧版本的 Streamlit 前端，可以使用 `app.py` 文件：
-```bash
-streamlit run app.py
-```
-
-注意：`app.py` 是旧版本的 Streamlit 实现，新版本使用 React 前端。
 

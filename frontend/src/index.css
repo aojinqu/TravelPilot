@@ -1,29 +1,44 @@
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+/* 引入 Tailwind 的核心样式 */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  background: #f5f5f5;
-  min-height: 100vh;
-  margin: 0;
-  padding: 0;
-}
+/*
+ * 设置全局基础样式 (可选但推荐)
+ * 这会为你的整个应用设置默认字体、背景和文字颜色，
+ * 就像图片中显示的那样。
+ */
+@layer base {
+    body {
+        /* * 你可以在这里设置主背景色，但由于你的 App.js 中有更复杂的
+         * 左右分栏布局，把背景色设置在最外层的 <div>
+         * (如 App.js 中) 可能会更灵活。
+         *
+         * 如果你希望 *所有地方* 默认都是这个背景，取消下面的注释：
+         */
+        /*
+        @apply bg-custom-gray-900 text-custom-gray-200;
+        */
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
-}
+        /* 确保默认字体是我们配置的 sans-serif */
+        @apply font-sans;
+    }
 
-#root {
-  width: 100%;
-  min-height: 100vh;
+    /* (可选) 自定义滚动条样式，使其更符合深色主题 */
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+        background: #1f2937; /* custom-gray-800 */
+    }
+    ::-webkit-scrollbar-thumb {
+        background: #4B5563; /* custom-gray-500 */
+        border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+        background: #6B7280; /* custom-gray-400 */
+    }
 }
 
 
