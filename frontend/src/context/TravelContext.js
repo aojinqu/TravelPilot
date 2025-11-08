@@ -12,6 +12,14 @@ const initialState = {
     priceSummary: null,
     chatMessages: [],
     isLoading: false,
+    // 旅行信息
+    travelInfo: {
+        departure: null,      // 出发地点
+        destination: null,    // 目的地
+        numDays: null,        // 旅游天数
+        numPeople: null,      // 旅游人数
+        budget: null,         // 总预算
+    },
 };
 
 // Provider 组件
@@ -46,6 +54,17 @@ export const TravelProvider = ({ children }) => {
         }));
     };
 
+    // 更新旅行信息
+    const updateTravelInfo = (info) => {
+        setState(prevState => ({
+            ...prevState,
+            travelInfo: {
+                ...prevState.travelInfo,
+                ...info,
+            },
+        }));
+    };
+
     // 清除所有数据
     const clearData = () => {
         setState(initialState);
@@ -56,6 +75,7 @@ export const TravelProvider = ({ children }) => {
         setItinerary,
         addChatMessage,
         setLoading,
+        updateTravelInfo,
         clearData,
     };
 

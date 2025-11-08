@@ -1,9 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTravel } from '../context/TravelContext';
+import { parseTravelInfo, validateTravelInfo, generateMissingInfoMessage } from '../utils/parseTravelInfo';
 
 const ChatSider = () => {
     const [inputMessage, setInputMessage] = useState('');
-    const { setItinerary, addChatMessage, setLoading, isLoading, chatMessages } = useTravel();
+    const { 
+        setItinerary, 
+        addChatMessage, 
+        setLoading, 
+        isLoading, 
+        chatMessages,
+        travelInfo,
+        updateTravelInfo 
+    } = useTravel();
     const messagesEndRef = useRef(null);
 
     // 自动滚动到底部
@@ -20,7 +29,6 @@ const ChatSider = () => {
 
         const messageToSend = inputMessage.trim();
         setInputMessage(''); // 立即清空输入框
-        setLoading(true);
 
         // 添加用户消息到聊天历史
         const userMessage = { 
@@ -29,6 +37,40 @@ const ChatSider = () => {
             timestamp: new Date().toISOString()
         };
         addChatMessage(userMessage);
+
+        // 解析用户输入中的旅行信息
+        const parsedInfo = parseTravelInfo(messageToSend, travelInfo);
+        
+        // 更新旅行信息（合并新旧信息）
+        if (Object.keys(parsedInfo).some(key => parsedInfo[key] !== travelInfo[key])) {
+            updateTravelInfo(parsedInfo);
+        }
+
+        // 合并后的完整旅行信息
+        const updatedTravelInfo = { ...travelInfo, ...parsedInfo };
+
+        // 验证旅行信息是否完整
+        const validation = validateTravelInfo(updatedTravelInfo);
+        
+        if (!validation.isValid) {
+            // 信息不完整，提示用户补充
+            const missingMessage = generateMissingInfoMessage(validation.missingFields);
+            addChatMessage({
+                type: 'system',
+                content: missingMessage,
+                timestamp: new Date().toISOString()
+            });
+            return; // 不调用 API，等待用户补充信息
+        }
+
+        // 信息完整，通知用户并调用 API 生成行程
+        addChatMessage({
+            type: 'system',
+            content: '✅ 旅行信息已收集完整！正在为您生成详细的旅行行程，请稍候...',
+            timestamp: new Date().toISOString()
+        });
+        
+        setLoading(true);
 
         // 准备聊天历史（包括当前消息）
         const updatedChatHistory = [
@@ -43,15 +85,25 @@ const ChatSider = () => {
         ];
 
         try {
+            // 构建发送给后端的消息，包含所有旅行信息
+            const enrichedMessage = `目的地：${updatedTravelInfo.destination}，出发地：${updatedTravelInfo.departure}，${updatedTravelInfo.numDays}天，${updatedTravelInfo.numPeople}人，预算${updatedTravelInfo.budget}元。${messageToSend}`;
+
             const response = await fetch('http://localhost:8000/api/chat', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    message: messageToSend,
+                    message: enrichedMessage,
                     vibe: ["Universal Studios Japan", "Foodie"],
-                    chat_history: updatedChatHistory
+                    chat_history: updatedChatHistory,
+                    travel_info: {
+                        destination: updatedTravelInfo.destination,
+                        departure: updatedTravelInfo.departure,
+                        num_days: updatedTravelInfo.numDays,
+                        num_people: updatedTravelInfo.numPeople,
+                        budget: updatedTravelInfo.budget,
+                    }
                 }),
             });
 
@@ -97,9 +149,19 @@ const ChatSider = () => {
             {/* 聊天消息区域 */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {chatMessages.length === 0 ? (
-                    <div className="text-center text-gray-400 mt-8">
-                        <p className="text-sm">开始您的旅行规划</p>
-                        <p className="text-xs mt-2 text-gray-500">输入您的旅行需求，AI 将为您生成详细的行程</p>
+                    <div className="text-center text-gray-400 mt-8 px-4">
+                        <p className="text-sm font-semibold mb-4">开始您的旅行规划</p>
+                        <div className="text-xs text-gray-500 space-y-2 text-left bg-gray-800/50 rounded-lg p-4">
+                            <p className="font-semibold text-gray-400 mb-2">请告诉我以下信息：</p>
+                            <ul className="space-y-1 list-disc list-inside">
+                                <li>出发地点（例如：从香港出发）</li>
+                                <li>目的地（例如：去大阪）</li>
+                                <li>旅游天数（例如：7天）</li>
+                                <li>旅游人数（例如：2人）</li>
+                                <li>总预算（例如：5000元）</li>
+                            </ul>
+                            <p className="mt-3 text-gray-400 italic">您可以一次性提供所有信息，也可以分多次提供。</p>
+                        </div>
                     </div>
                 ) : (
                     chatMessages.map((msg, index) => (
@@ -112,10 +174,18 @@ const ChatSider = () => {
                                     msg.type === 'user'
                                         ? 'bg-purple-600 text-white'
                                         : msg.type === 'system'
-                                        ? 'bg-red-900 text-red-200'
+                                        ? 'bg-yellow-900/50 border border-yellow-700 text-yellow-100'
                                         : 'bg-gray-700 text-gray-200'
                                 }`}
                             >
+                                {msg.type === 'system' && (
+                                    <div className="flex items-center mb-2">
+                                        <svg className="w-4 h-4 mr-2 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                        <span className="text-xs font-semibold text-yellow-300">提示</span>
+                                    </div>
+                                )}
                                 <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
                                 {msg.timestamp && (
                                     <p className="text-xs mt-1 opacity-70">
@@ -143,6 +213,40 @@ const ChatSider = () => {
                 <div ref={messagesEndRef} />
             </div>
 
+            {/* 旅行信息显示区域 */}
+            {(travelInfo.departure || travelInfo.destination || travelInfo.numDays || travelInfo.numPeople || travelInfo.budget) && (
+                <div className="px-4 py-2 border-t border-gray-700 bg-gray-800/50">
+                    <div className="text-xs text-gray-400 mb-2">已收集的信息：</div>
+                    <div className="flex flex-wrap gap-2">
+                        {travelInfo.departure && (
+                            <span className="px-2 py-1 bg-green-900/50 text-green-300 rounded text-xs">
+                                出发：{travelInfo.departure}
+                            </span>
+                        )}
+                        {travelInfo.destination && (
+                            <span className="px-2 py-1 bg-blue-900/50 text-blue-300 rounded text-xs">
+                                目的地：{travelInfo.destination}
+                            </span>
+                        )}
+                        {travelInfo.numDays && (
+                            <span className="px-2 py-1 bg-purple-900/50 text-purple-300 rounded text-xs">
+                                {travelInfo.numDays}天
+                            </span>
+                        )}
+                        {travelInfo.numPeople && (
+                            <span className="px-2 py-1 bg-orange-900/50 text-orange-300 rounded text-xs">
+                                {travelInfo.numPeople}人
+                            </span>
+                        )}
+                        {travelInfo.budget && (
+                            <span className="px-2 py-1 bg-yellow-900/50 text-yellow-300 rounded text-xs">
+                                预算：{travelInfo.budget}元
+                            </span>
+                        )}
+                    </div>
+                </div>
+            )}
+
             {/* 底部输入区 */}
             <div className="p-4 border-t border-gray-700">
                 {/* Vibe Selector */}
@@ -156,12 +260,12 @@ const ChatSider = () => {
                     </div>
                     <div className="flex flex-wrap gap-2">
                         <button className="px-3 py-1 bg-gray-700 rounded-full text-xs text-gray-300 hover:bg-gray-600 transition-colors duration-200 flex items-center">
-                            Perfect choices! Univers
+                            Food
                             <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                         </button>
                         <button className="px-3 py-1 bg-gray-700 rounded-full text-xs text-gray-300 hover:bg-gray-600 transition-colors duration-200 flex items-center">
-                            Studios Japan,
-                            <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18-6M6 6l12 12"></path></svg>
+                            Adventure
+                            <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                         </button>
                     </div>
                 </div>
@@ -171,16 +275,14 @@ const ChatSider = () => {
                     <span className="w-6 h-6 rounded-full bg-purple-500 flex items-center justify-center text-white text-xs font-bold mr-2">A</span>
                     <input
                         type="text"
-                        placeholder="Ask Airial..."
+                        placeholder="Ask TravelPilot..."
                         value={inputMessage}
                         onChange={(e) => setInputMessage(e.target.value)}
                         onKeyPress={handleKeyPress}
                         disabled={isLoading}
                         className="flex-1 bg-transparent text-white placeholder-gray-400 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                     />
-                    <button className="ml-2 text-gray-400 hover:text-white">
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.414a3 3 0 00-4.242-4.242L9.66 9.66"></path></svg>
-                    </button>
+
                     <button
                         onClick={handleChatSubmit}
                         disabled={isLoading}
@@ -197,11 +299,10 @@ const ChatSider = () => {
                     </button>
                 </div>
                 <p className="text-xs text-gray-500 mt-2">
-                    Airial is in beta and can make mistakes. Please check important info.
+                    TravelPilot is in beta and can make mistakes. Please check important info.
                 </p>
             </div>
 
-            {/* ... 其他部分保持不变 ... */}
         </div>
     );
 };

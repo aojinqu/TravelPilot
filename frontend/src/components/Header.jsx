@@ -7,10 +7,10 @@ const Header = () => {
 
     // 默认值（当没有数据时显示）
     const title = tripOverview?.title || "Winter Feasts in Osaka's Food Paradise";
-    const dateRange = tripOverview?.date_range || "Feb 6 - 12";
+    const dateRange = tripOverview?.date_range || "Dec 6 - 12";
     const totalPrice = priceSummary 
         ? `${priceSummary.currency} ${priceSummary.grand_total}`
-        : "SGD 554";
+        : "HKD 404";
 
     return (
         <header className="flex items-center justify-between px-6 py-3 bg-gray-900 shadow-md z-10">
@@ -57,7 +57,7 @@ const Header = () => {
                     <span className="text-xl font-semibold text-gray-200">{totalPrice}</span>
                 </div>
                 <button className="flex items-center px-6 py-2 bg-[#8965F2] hover:bg-purple-700 text-white font-medium rounded-lg shadow-lg transition-colors duration-200">
-                    Book now
+                    To Calendar
                     <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
                 </button>
             </div>
