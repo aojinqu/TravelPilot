@@ -1,3 +1,7 @@
 fastapi
 uvicorn[standard]
-pydantic
+agno
+openai
+icalendar
+google-search-results
+python-multipart
