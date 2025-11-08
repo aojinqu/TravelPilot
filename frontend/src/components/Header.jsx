@@ -93,25 +93,25 @@ const Header = () => {
                 <h1 className="text-xl font-bold text-gray-200">{title}</h1>
             </div>
 
-            {/* 中间筛选：已更新 */}
-            <div className="flex items-center space-x-3 text-gray-300">
-                {/* 日期选择 */}
-                <DropdownButton triggerContent={dateRange} triggerIcon={dateIcon}>
-                    {/* 使用新组件! */}
-                    <DateRangePicker />
-                </DropdownButton>
+            {/*/!* 中间筛选：已更新 *!/*/}
+            {/*<div className="flex items-center space-x-3 text-gray-300">*/}
+            {/*    /!* 日期选择 *!/*/}
+            {/*    <DropdownButton triggerContent={dateRange} triggerIcon={dateIcon}>*/}
+            {/*        /!* 使用新组件! *!/*/}
+            {/*        <DateRangePicker />*/}
+            {/*    </DropdownButton>*/}
 
-                {/* 人数选择 */}
-                <DropdownButton triggerContent={numPeople} triggerIcon={peopleIcon}>
-                    {/* 使用新组件! */}
-                    <PassengerSelector />
-                </DropdownButton>
+            {/*    /!* 人数选择 *!/*/}
+            {/*    <DropdownButton triggerContent={numPeople} triggerIcon={peopleIcon}>*/}
+            {/*        /!* 使用新组件! *!/*/}
+            {/*        <PassengerSelector />*/}
+            {/*    </DropdownButton>*/}
 
-                {/* 地点选择 */}
-                <DropdownButton triggerContent={location} triggerIcon={locationIcon}>
-                    <LocationSearch />
-                </DropdownButton>
-            </div>
+            {/*    /!* 地点选择 *!/*/}
+            {/*    <DropdownButton triggerContent={location} triggerIcon={locationIcon}>*/}
+            {/*        <LocationSearch />*/}
+            {/*    </DropdownButton>*/}
+            {/*</div>*/}
 
             {/* ... 右侧总价和预订按钮 (保持不变) ... */}
             <div className="flex items-center space-x-4">

@@ -1,17 +1,61 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTravel } from '../context/TravelContext';
 import { parseTravelInfo, validateTravelInfo, generateMissingInfoMessage } from '../utils/parseTravelInfo';
+import LocationSearch from "./LocationSearch";
+import PassengerSelector from "./PassengerSelector";
+import DateRangePicker from "./DateRangePicker";
+
+// DropdownButton 组件 (更新后的代码)
+
+const DropdownButton = ({ triggerContent, triggerIcon, children }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const dropdownRef = useRef(null);
+
+    useEffect(() => {
+        if (!isOpen) return;
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isOpen]);
+
+    return (
+        <div className="relative" ref={dropdownRef}>
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="flex items-center px-3 py-1 bg-gray-700 rounded-md hover:bg-gray-600 transition-colors duration-200"
+            >
+                {triggerIcon}
+                {triggerContent}
+                <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+            </button>
+            {isOpen && (
+                <div
+                    // 🚀 关键修复：从 top-full mt-2 改为 bottom-full mb-2
+                    className="absolute bottom-full mb-2 w-auto bg-gray-800 rounded-lg shadow-xl z-20 border border-gray-700"
+                >
+                    {children}
+                </div>
+            )}
+        </div>
+    );
+};
 
 const ChatSider = () => {
     const [inputMessage, setInputMessage] = useState('');
-    const { 
-        setItinerary, 
-        addChatMessage, 
-        setLoading, 
-        isLoading, 
+    const {
+        setItinerary,
+        addChatMessage,
+        setLoading,
+        isLoading,
         chatMessages,
         travelInfo,
-        updateTravelInfo 
+        updateTravelInfo
     } = useTravel();
     const messagesEndRef = useRef(null);
 
@@ -31,8 +75,8 @@ const ChatSider = () => {
         setInputMessage(''); // 立即清空输入框
 
         // 添加用户消息到聊天历史
-        const userMessage = { 
-            type: 'user', 
+        const userMessage = {
+            type: 'user',
             content: messageToSend,
             timestamp: new Date().toISOString()
         };
@@ -40,7 +84,7 @@ const ChatSider = () => {
 
         // 解析用户输入中的旅行信息
         const parsedInfo = parseTravelInfo(messageToSend, travelInfo);
-        
+
         // 更新旅行信息（合并新旧信息）
         if (Object.keys(parsedInfo).some(key => parsedInfo[key] !== travelInfo[key])) {
             updateTravelInfo(parsedInfo);
@@ -51,7 +95,7 @@ const ChatSider = () => {
 
         // 验证旅行信息是否完整
         const validation = validateTravelInfo(updatedTravelInfo);
-        
+
         if (!validation.isValid) {
             // 信息不完整，提示用户补充
             const missingMessage = generateMissingInfoMessage(validation.missingFields);
@@ -69,7 +113,7 @@ const ChatSider = () => {
             content: '✅ 旅行信息已收集完整！正在为您生成详细的旅行行程，请稍候...',
             timestamp: new Date().toISOString()
         });
-        
+
         setLoading(true);
 
         // 准备聊天历史（包括当前消息）
@@ -113,14 +157,14 @@ const ChatSider = () => {
 
             const itineraryData = await response.json();
             console.log("收到后端数据:", itineraryData);
-            
+
             // 更新行程数据
             setItinerary(itineraryData);
-            
+
             // 添加 AI 回复到聊天历史
             if (itineraryData.ai_response) {
-                addChatMessage({ 
-                    type: 'ai', 
+                addChatMessage({
+                    type: 'ai',
                     content: itineraryData.ai_response,
                     timestamp: new Date().toISOString()
                 });
@@ -143,7 +187,34 @@ const ChatSider = () => {
             handleChatSubmit();
         }
     };
-
+    // ... 你的默认值和数据提取逻辑 (保持不变) ...
+    const location = travelInfo?.destination || "Osaka";
+    const dateRange = travelInfo?.dateRange || "Feb 6 - Feb 12";
+    const numPeople = travelInfo?.numPeople || "1";
+    const dateIcon = <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>;
+    const peopleIcon = <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>;
+    const locationIcon = (
+        <svg
+            className="w-4 h-4 mr-1 flex-shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+        >
+            <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z"
+            ></path>
+            <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+            ></path>
+        </svg>
+    );
     return (
         <div className="w-96 min-w-[384px] bg-gradient-to-b from-[#2A1643] to-[#3A1E5C] flex flex-col border-r border-gray-700 relative">
             {/* 聊天消息区域 */}
@@ -249,27 +320,76 @@ const ChatSider = () => {
 
             {/* 底部输入区 */}
             <div className="p-4 border-t border-gray-700">
-                {/* Vibe Selector */}
-                <div className="mb-4">
-                    <div className="flex items-center justify-between text-gray-300 text-sm mb-2">
-                        <span>Select your vibe</span>
-                        <button className="flex items-center text-purple-400 hover:text-purple-300">
-                            Expand
-                            <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
-                        </button>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                        <button className="px-3 py-1 bg-gray-700 rounded-full text-xs text-gray-300 hover:bg-gray-600 transition-colors duration-200 flex items-center">
-                            Food
-                            <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                        </button>
-                        <button className="px-3 py-1 bg-gray-700 rounded-full text-xs text-gray-300 hover:bg-gray-600 transition-colors duration-200 flex items-center">
-                            Adventure
-                            <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                        </button>
-                    </div>
+
+                {/* 1️⃣ 顶部标题 */}
+                <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-medium text-gray-300 tracking-wide">
+                        Configure Your Trip
+                    </h3>
+                    <button className="flex items-center text-gray-400 hover:text-purple-400 text-xs transition-colors">
+                        Expand
+                        <svg
+                            className="w-3.5 h-3.5 ml-1"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </button>
                 </div>
 
+                {/* 2️⃣ Vibe 标签 */}
+                <div className="flex flex-wrap gap-2 mb-3">
+                    {["Food", "Adventure"].map((vibe) => (
+                        <button
+                            key={vibe}
+                            className="px-3 py-1.5 bg-gray-700/70 text-xs text-gray-200 rounded-full border border-gray-600 hover:border-purple-500 hover:text-white hover:bg-gray-700 transition-all"
+                        >
+                            {vibe}
+                        </button>
+                    ))}
+                </div>
+
+                {/* 3️⃣ 三个配置按钮区块 */}
+                <div className="flex flex-nowrap items-center gap-3 mb-3">
+                    {/* 日期选择器 - 固定宽度 */}
+                    <div className="flex-shrink-0">
+                        <DropdownButton
+                            triggerContent={<span className="text-xs text-gray-200 whitespace-nowrap">{dateRange}</span>}
+                            triggerIcon={dateIcon}
+                            dropdownClassName="absolute bottom-full mb-2 left-0 z-20"
+                        >
+                            <DateRangePicker />
+                        </DropdownButton>
+                    </div>
+
+                    {/* 人数选择器 - 固定宽度 */}
+                    <div className="flex-shrink-0">
+                        <DropdownButton
+                            triggerContent={<span className="text-xs text-gray-200 whitespace-nowrap">{numPeople}</span>}
+                            triggerIcon={peopleIcon}
+                            dropdownClassName="absolute bottom-full mb-2 right-0 z-20"
+                        >
+                            <PassengerSelector />
+                        </DropdownButton>
+                    </div>
+
+                    {/* 地点选择器 - 弹性宽度 */}
+                    <div className="flex-1 min-w-0">
+                        <DropdownButton
+                            triggerContent={
+                                <span className="text-xs text-gray-200 whitespace-nowrap truncate block w-full">
+                    {location}
+                </span>
+                            }
+                            triggerIcon={locationIcon}
+                            dropdownClassName="absolute bottom-full mb-2 left-0 z-20"
+                        >
+                            <LocationSearch />
+                        </DropdownButton>
+                    </div>
+                </div>
                 {/* 聊天输入框 - 修复部分 */}
                 <div className="flex items-center bg-gray-700 rounded-lg p-2">
                     <span className="w-6 h-6 rounded-full bg-purple-500 flex items-center justify-center text-white text-xs font-bold mr-2">A</span>
