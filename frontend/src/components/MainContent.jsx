@@ -169,7 +169,8 @@ const MainContent = () => {
                         {hotels.map((hotel, index) => {
                             const stars = '★'.repeat(Math.floor(hotel.rating));
                             return (
-                                <div key={index} className="flex items-center bg-gray-700 p-4 rounded-lg">
+                                <div key={index} className="flex items-center bg-gray-700 p-4 rounded-lg"
+                                onClick={() => window.open(hotel.link, '_blank', 'noopener,noreferrer')}>
                                     <div className="w-20 h-20 bg-gray-600 rounded-lg mr-4 flex items-center justify-center overflow-hidden">
                                         {hotel.image_url ? (
                                             <img
