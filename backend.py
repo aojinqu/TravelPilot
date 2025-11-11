@@ -15,6 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
 from flight_service import SimpleFlightService
+from datetime import datetime
 
 app = FastAPI(title="MCP AI Travel Planner API")
 
@@ -342,6 +343,8 @@ class TravelInfo(BaseModel):
     num_days: int
     num_people: int
     budget: float
+    start_date: str
+    end_date: str
 
 class ChatRequest(BaseModel):
     message: str
@@ -478,9 +481,10 @@ async def handle_chat(request: ChatRequest):
         )
     )
 
-    #todo 加时间
-    departure_date = "2026-02-06"
-    return_date = "2026-02-09"
+    start_date = datetime.strptime(travel_info.start_date, '%a %b %d %Y')
+    end_date = datetime.strptime(travel_info.end_date, '%a %b %d %Y')
+    departure_date = start_date.strftime('%Y-%m-%d')
+    return_date = end_date.strftime('%Y-%m-%d')
     outbound_flights, inbound_flights = flight_service.get_round_trip_flights(
         departure_city=travel_info.departure,
         destination_city=travel_info.destination,
