@@ -147,6 +147,8 @@ const ChatSider = () => {
                         num_days: updatedTravelInfo.numDays,
                         num_people: updatedTravelInfo.numPeople,
                         budget: updatedTravelInfo.budget,
+                        start_date: updatedTravelInfo.startDate,
+                        end_date: updatedTravelInfo.endDate
                     }
                 }),
             });

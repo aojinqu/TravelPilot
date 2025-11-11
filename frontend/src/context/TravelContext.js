@@ -18,6 +18,8 @@ const initialState = {
         destination: null,    // 目的地
         numDays: null,        // 旅游天数
         dateRange: null,      // 开始-结束日期
+        startDate: null,      // 开始日期
+        endDate: null,        // 结束日期
         numPeople: null,      // 旅游人数
         budget: null,         // 总预算
     },
