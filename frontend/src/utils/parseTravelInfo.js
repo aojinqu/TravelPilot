@@ -59,6 +59,7 @@ export const parseTravelInfo = (text, existingInfo = {}) => {
             }
         }
     }
+    //提示用户只需要输入出发地，目的地，预算，其余的在选项中选择即可
 
     // 解析旅游天数 (X天/X日游/玩X天)
     if (!info.numDays) {
