@@ -63,8 +63,8 @@ const DateRangePicker = () => {
                 });
             };
             updateTravelInfo({
-                startDate: startDate.toISOString(),
-                endDate: endDate.toISOString(),
+                startDate: startDate.toDateString(),
+                endDate: endDate.toDateString(),
                 dateRange: `${formatDate(start)} - ${formatDate(end)}`,
                 numDays: numDays
             });
