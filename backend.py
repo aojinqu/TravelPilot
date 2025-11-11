@@ -1,4 +1,6 @@
 import re
+import httpx
+import json
 import asyncio
 from textwrap import dedent
 from agno.agent import Agent
@@ -12,7 +14,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
-
+from flight_service import SimpleFlightService
+from datetime import datetime
 
 app = FastAPI(title="MCP AI Travel Planner API")
 
@@ -129,6 +132,7 @@ async def run_mcp_travel_planner(destination: str, num_days: int, num_people: in
         **Duration:** {num_days} days
         **People:** {num_people} 
         **Total Budget:** ${budget} HKD
+        
         **ABSOLUTE REQUIREMENT: The output MUST include complete itineraries for all {num_days} days,you MUST output ONLY valid JSON format, do not include any additional text, explanations, or markdown, otherwise it will be rejected**
     
             DO NOT ask any questions. Generate a complete, highly detailed itinerary now using all available tools.
@@ -234,8 +238,8 @@ async def generate_itinerary(request: TravelPlanRequest):
     """
     生成旅行行程
     """
-    openai_key=os.getenv("OPENROUTER_API_KEY")
-    googlemap_key=os.getenv("GOOGLE_MAP_KEY")
+    openai_key = os.getenv("OPENROUTER_API_KEY")
+    googlemap_key = os.getenv("GOOGLE_MAP_KEY")
     try:
         itinerary = await run_mcp_travel_planner(
             destination=request.destination,
@@ -247,7 +251,7 @@ async def generate_itinerary(request: TravelPlanRequest):
             #openai_key=request.openai_key,
             #google_maps_key=request.google_maps_key
         )
-        
+
         return {
             "success": True,
             "itinerary": itinerary,
@@ -256,6 +260,43 @@ async def generate_itinerary(request: TravelPlanRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"生成行程时出错: {str(e)}")
 
+async def get_airbnb_images(room_url: str):
+    """
+    获取 Airbnb 房源图片的代理接口
+    """
+    try:
+        print(f"正在获取 Airbnb 房源图片: {room_url}")
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            }
+            
+            response = await client.get(room_url, headers=headers)
+            response.raise_for_status()
+            
+            # 查找JSON-LD数据
+            json_ld_pattern = r'<script type="application/ld\+json">(.*?)</script>'
+            matches = re.findall(json_ld_pattern, response.text, re.DOTALL)
+            
+            image_urls = []
+            for match in matches:
+                try:
+                    data = json.loads(match)
+                    if 'image' in data:
+                        if isinstance(data['image'], str):
+                            image_urls.append(data['image'])
+                        elif isinstance(data['image'], list):
+                            image_urls.extend(data['image'][:3])
+                except:
+                    continue
+            
+            print(f"找到 {len(image_urls)} 张图片")
+            return image_urls[:1]  # 返回第一张图片
+            
+    except Exception as e:
+        print(f"获取 Airbnb 图片失败: {e}")
+        return []
 
 @app.post("/api/download-calendar")
 async def download_calendar(request: dict):
@@ -302,6 +343,8 @@ class TravelInfo(BaseModel):
     num_days: int
     num_people: int
     budget: float
+    start_date: str
+    end_date: str
 
 class ChatRequest(BaseModel):
     message: str
@@ -330,7 +373,6 @@ class Flight(BaseModel):
     arrival_date: str
     duration: str
     airline: str
-    airline_logo_url: str  # UI 上的航空公司 Logo
     nonstop: bool
 
 
@@ -341,6 +383,9 @@ class Hotel(BaseModel):
     review_count: int
     price_per_night: int
     currency: str
+    address:str
+    amenities:List[str] = []
+    link:str
 
 
 class PriceSummary(BaseModel):
@@ -393,7 +438,6 @@ async def handle_chat(request: ChatRequest):
             arrival_date="Feb 6",
             duration="3h25m",
             airline="Cathay Pacific",
-            airline_logo_url="https://example.com/logo/cx.png",  # 替换为 Logo URL
             nonstop=True
         ),
         Flight(
@@ -405,34 +449,27 @@ async def handle_chat(request: ChatRequest):
             arrival_date="Feb 12",
             duration="4h25m",
             airline="HK Express",
-            airline_logo_url="https://example.com/logo/hk.png",  # 替换为 Logo URL
             nonstop=True
         )
     ]
 
-    mock_hotels = [
-        Hotel(
-            name="The Royal Park Hotel Iconic Osaka Midosuji",
-            image_url="https://example.com/images/hotel_room.jpg",  # 替换为真实的图片 URL
-            rating=4.7,
-            review_count=1234,
-            price_per_night=37,  # (221 / 6 nights ≈ 37 per night)
-            currency="SGD"
-        )
-    ]
-
-    mock_price = PriceSummary(
-        flights_total=332,
-        hotels_total=221,
-        grand_total=554,  # 332 + 221
-        currency="SGD"
-    )
+    # mock_hotels = [
+    #     Hotel(
+    #         name="The Royal Park Hotel Iconic Osaka Midosuji",
+    #         image_url="https://example.com/images/hotel_room.jpg",  # 替换为真实的图片 URL
+    #         rating=4.7,
+    #         review_count=1234,
+    #         price_per_night=37,  # (221 / 6 nights ≈ 37 per night)
+    #         currency="SGD"
+    #     )
+    # ]
 
     mock_ai_response = "Osaka in February - plum blossoms and amazing winter comfort food! Here are some incredible experiences waiting for you in Japan's kitchen."
     
+    flight_service = SimpleFlightService()
     travel_info=request.travel_info
 
-    print(travel_info)
+    # print(travel_info)
 
     response = await generate_itinerary(
         TravelPlanRequest(
@@ -444,13 +481,93 @@ async def handle_chat(request: ChatRequest):
         )
     )
 
+    start_date = datetime.strptime(travel_info.start_date, '%a %b %d %Y')
+    end_date = datetime.strptime(travel_info.end_date, '%a %b %d %Y')
+    departure_date = start_date.strftime('%Y-%m-%d')
+    return_date = end_date.strftime('%Y-%m-%d')
+    outbound_flights, inbound_flights = flight_service.get_round_trip_flights(
+        departure_city=travel_info.departure,
+        destination_city=travel_info.destination,
+        num_people=travel_info.num_people,
+        budget=travel_info.budget,
+        departure_date=departure_date,
+        return_date=return_date
+    )
+
+    real_flights = []
+    if outbound_flights and inbound_flights:
+        best_outbound = outbound_flights[0]
+        best_inbound = inbound_flights[0]
+        outbound_price = float(best_outbound['price']['total'])
+        inbound_price = float(best_inbound['price']['total'])
+        
+        duration_outbound = best_outbound['itineraries'][0]['duration'].replace('PT','').lower()
+        segment_outbound = best_outbound['itineraries'][0]['segments'][0]
+        duration_inbound = best_inbound['itineraries'][0]['duration'].replace('PT','').lower()
+        segment_inbound = best_inbound['itineraries'][0]['segments'][0]
+        real_flights.append(Flight(
+            origin=travel_info.departure,
+            destination=travel_info.destination,
+            departure_time=segment_outbound['departure']['at'].split('T')[1][:5],
+            departure_date=segment_outbound['departure']['at'].split('T')[0],
+            arrival_time=segment_outbound['arrival']['at'].split('T')[1][:5],
+            arrival_date=segment_outbound['arrival']['at'].split('T')[0],       
+            duration=duration_outbound,
+            airline=segment_outbound['carrierCode'],
+            nonstop=True
+        ))
+        real_flights.append(Flight(
+            origin=travel_info.destination,
+            destination=travel_info.departure,
+            departure_time=segment_inbound['departure']['at'].split('T')[1][:5],
+            departure_date=segment_inbound['departure']['at'].split('T')[0],
+            arrival_time=segment_inbound['arrival']['at'].split('T')[1][:5],
+            arrival_date=segment_inbound['arrival']['at'].split('T')[0],       
+            duration=duration_inbound,
+            airline=segment_inbound['carrierCode'],
+            nonstop=True
+        ))
+    else:
+        real_flights = mock_flights
+
+    itinerary_data = json.loads(response.get("itinerary", {}))
+
+    real_hotels = []
+    accommodation_data = itinerary_data["accommodation"]
+    for acc in accommodation_data:
+        # 获取 Airbnb 图片
+        image_url = ""
+        if acc.get("link") and "airbnb.com" in acc["link"]:
+            images = await get_airbnb_images(acc["link"])
+            if images:
+                image_url = images[0]
+        hotel = Hotel(
+            name=acc.get("name", ""),
+            image_url=image_url,
+            rating=acc.get("rating", 0),
+            review_count=acc.get("review_count", 0),
+            price_per_night=int(acc.get("price_per_night_hkd", 0)),
+            currency="HKD",
+            address=acc.get("address", ""),
+            amenities=acc.get("amenities", []),
+            link=acc.get("link", "")
+        )
+        
+        real_hotels.append(hotel)
+    print(real_hotels[0].link)
+    real_price = PriceSummary(
+            flights_total=int(outbound_price + inbound_price),
+            hotels_total=int(itinerary_data["budget_breakdown"]["accommodation_total_hkd"]),
+            grand_total=int(travel_info.budget-itinerary_data["budget_breakdown"]["remaining_budget_hkd"]) ,  # 332 + 221
+            currency="HKD"
+        )
     # --- 返回完整的响应 ---
     return ItineraryResponse(
         ai_response=response.get("itinerary"),
         trip_overview=mock_overview,
-        flights=mock_flights,
-        hotels=mock_hotels,
-        price_summary=mock_price
+        flights=real_flights,
+        hotels=real_hotels,
+        price_summary=real_price
     )
 
 if __name__ == "__main__":
