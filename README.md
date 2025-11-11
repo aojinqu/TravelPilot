@@ -55,6 +55,21 @@ npm run dev
 ```
 前端将在 http://localhost:3000 运行
 
+**终端 3 - 启动前端开发服务器：**
+
+```bash
+npm install -g rednote-mind-mcp
+# 首次使用，运行登录向导
+rednote-init
+# 或
+rednote-mind-mcp init
+
+# 运行代码
+python xhs.py
+```
+
+[rednote-mind-mcp配置指南](https://www.npmjs.com/package/rednote-mind-mcp)
+
 #### 4. 使用应用
 
 1. 在浏览器中访问 http://localhost:3000
