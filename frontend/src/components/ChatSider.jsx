@@ -1,13 +1,15 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useTravel } from '../context/TravelContext';
-import { parseTravelInfo, validateTravelInfo, generateMissingInfoMessage } from '../utils/parseTravelInfo';
+import React, {useState, useEffect, useRef} from 'react';
+import {useTravel} from '../context/TravelContext';
+import {parseTravelInfo, validateTravelInfo, generateMissingInfoMessage} from '../utils/parseTravelInfo';
 import LocationSearch from "./LocationSearch";
 import PassengerSelector from "./PassengerSelector";
 import DateRangePicker from "./DateRangePicker";
+import BudgetSelector from "./BudgetSelector";
+import VibeSelector from "./VibeSelector";
 
 // DropdownButton 组件 (更新后的代码)
 
-const DropdownButton = ({ triggerContent, triggerIcon, children }) => {
+const DropdownButton = ({triggerContent, triggerIcon, children}) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
 
@@ -32,7 +34,10 @@ const DropdownButton = ({ triggerContent, triggerIcon, children }) => {
             >
                 {triggerIcon}
                 {triggerContent}
-                <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                     xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
             </button>
             {isOpen && (
                 <div
@@ -48,6 +53,7 @@ const DropdownButton = ({ triggerContent, triggerIcon, children }) => {
 
 const ChatSider = () => {
     const [inputMessage, setInputMessage] = useState('');
+    const [isConfigExpanded, setIsConfigExpanded] = useState(true); // 新增：控制配置区域展开状态
     const {
         setItinerary,
         addChatMessage,
@@ -61,12 +67,15 @@ const ChatSider = () => {
 
     // 自动滚动到底部
     const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        messagesEndRef.current?.scrollIntoView({behavior: 'smooth'});
     };
 
     useEffect(() => {
         scrollToBottom();
     }, [chatMessages, isLoading]);
+    const toggleConfigExpanded = () => {
+        setIsConfigExpanded(!isConfigExpanded);
+    };
 
     const handleChatSubmit = async () => {
         if (!inputMessage.trim() || isLoading) return;
@@ -91,7 +100,7 @@ const ChatSider = () => {
         }
 
         // 合并后的完整旅行信息
-        const updatedTravelInfo = { ...travelInfo, ...parsedInfo };
+        const updatedTravelInfo = {...travelInfo, ...parsedInfo};
 
         // 验证旅行信息是否完整
         const validation = validateTravelInfo(updatedTravelInfo);
@@ -139,7 +148,7 @@ const ChatSider = () => {
                 },
                 body: JSON.stringify({
                     message: enrichedMessage,
-                    vibe: ["Universal Studios Japan", "Foodie"],
+                    vibe: updatedTravelInfo.vibes,
                     chat_history: updatedChatHistory,
                     travel_info: {
                         destination: updatedTravelInfo.destination,
@@ -190,11 +199,21 @@ const ChatSider = () => {
         }
     };
     // ... 你的默认值和数据提取逻辑 (保持不变) ...
-    const location = travelInfo?.destination || "Osaka";
+    const destination = travelInfo?.destination || "Destination";
+    const departure = travelInfo.departure || "departure";
     const dateRange = travelInfo?.dateRange || "Feb 6 - Feb 12";
-    const numPeople = travelInfo?.numPeople || "1";
-    const dateIcon = <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>;
-    const peopleIcon = <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>;
+    const numPeople = travelInfo?.numPeople || "0";
+    const budgetDisplay = travelInfo.budget ? `${travelInfo.currency || 'CNY'} ${travelInfo.budget}` : "CNY 0";
+    const dateIcon = <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                          xmlns="http://www.w3.org/2000/svg">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+    </svg>;
+    const peopleIcon = <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                            xmlns="http://www.w3.org/2000/svg">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+    </svg>;
     const locationIcon = (
         <svg
             className="w-4 h-4 mr-1 flex-shrink-0"
@@ -217,8 +236,18 @@ const ChatSider = () => {
             ></path>
         </svg>
     );
+    const budgetIcon = <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                            xmlns="http://www.w3.org/2000/svg">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+              d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.105 0 2 .895 2 2s-.895 2-2 2-2-.895-2-2 .895-2 2-2zm0-4v2m0 12v2m0-16c-4.418 0-8 3.582-8 8s3.582 8 8 8 8-3.582 8-8-3.582-8-8-8z"></path>
+    </svg>;
+    const departureIcon = <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                               xmlns="http://www.w3.org/2000/svg">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+    </svg>;
     return (
-        <div className="w-96 min-w-[384px] bg-gradient-to-b from-[#2A1643] to-[#3A1E5C] flex flex-col border-r border-gray-700 relative">
+        <div
+            className="w-96 min-w-[384px] bg-gradient-to-b from-[#2A1643] to-[#3A1E5C] flex flex-col border-r border-gray-700 relative">
             {/* 聊天消息区域 */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {chatMessages.length === 0 ? (
@@ -247,14 +276,16 @@ const ChatSider = () => {
                                     msg.type === 'user'
                                         ? 'bg-purple-600 text-white'
                                         : msg.type === 'system'
-                                        ? 'bg-yellow-900/50 border border-yellow-700 text-yellow-100'
-                                        : 'bg-gray-700 text-gray-200'
+                                            ? 'bg-yellow-900/50 border border-yellow-700 text-yellow-100'
+                                            : 'bg-gray-700 text-gray-200'
                                 }`}
                             >
                                 {msg.type === 'system' && (
                                     <div className="flex items-center mb-2">
-                                        <svg className="w-4 h-4 mr-2 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        <svg className="w-4 h-4 mr-2 text-yellow-400" fill="none" stroke="currentColor"
+                                             viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                                                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                         </svg>
                                         <span className="text-xs font-semibold text-yellow-300">提示</span>
                                     </div>
@@ -277,157 +308,202 @@ const ChatSider = () => {
                         <div className="bg-gray-700 rounded-lg p-3">
                             <div className="flex space-x-2">
                                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                                     style={{animationDelay: '0.2s'}}></div>
+                                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                                     style={{animationDelay: '0.4s'}}></div>
                             </div>
                         </div>
                     </div>
                 )}
-                <div ref={messagesEndRef} />
+                <div ref={messagesEndRef}/>
             </div>
 
             {/* 旅行信息显示区域 */}
-            {(travelInfo.departure || travelInfo.destination || travelInfo.numDays || travelInfo.numPeople || travelInfo.budget) && (
-                <div className="px-4 py-2 border-t border-gray-700 bg-gray-800/50">
+            {(travelInfo.departure || travelInfo.destination || travelInfo.numDays || travelInfo.numPeople || travelInfo.budget||(travelInfo.vibes && travelInfo.vibes.length > 0)) && (
+                <div className="px-4 py-2 bg-gray-800/50 border-t border-gray-700">
                     <div className="text-xs text-gray-400 mb-2">已收集的信息：</div>
                     <div className="flex flex-wrap gap-2">
                         {travelInfo.departure && (
                             <span className="px-2 py-1 bg-green-900/50 text-green-300 rounded text-xs">
-                                出发：{travelInfo.departure}
-                            </span>
+                            出发：{travelInfo.departure}
+                        </span>
                         )}
                         {travelInfo.destination && (
                             <span className="px-2 py-1 bg-blue-900/50 text-blue-300 rounded text-xs">
-                                目的地：{travelInfo.destination}
-                            </span>
+                            目的地：{travelInfo.destination}
+                        </span>
                         )}
                         {travelInfo.numDays && (
                             <span className="px-2 py-1 bg-purple-900/50 text-purple-300 rounded text-xs">
-                                {travelInfo.numDays}天
-                            </span>
+                            {travelInfo.numDays}天
+                        </span>
                         )}
-                        {travelInfo.numPeople && (
+                        {travelInfo.numPeople !== 0 && travelInfo.numPeople !== null && (
                             <span className="px-2 py-1 bg-orange-900/50 text-orange-300 rounded text-xs">
-                                {travelInfo.numPeople}人
-                            </span>
+                            {travelInfo.numPeople}人
+                        </span>
                         )}
                         {travelInfo.budget && (
                             <span className="px-2 py-1 bg-yellow-900/50 text-yellow-300 rounded text-xs">
-                                预算：{travelInfo.budget}元
-                            </span>
+                            预算：{travelInfo.budget}元
+                        </span>
+                        )}
+                        {/* Vibe 标签 */}
+                        {travelInfo.vibes && travelInfo.vibes.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                                {travelInfo.vibes.map(vibe => (
+                                    <span
+                                        key={vibe}
+                                        className="px-2 py-1 bg-purple-900/50 text-purple-300 rounded text-xs"
+                                    >
+                            {vibe}
+                        </span>
+                                ))}
+                            </div>
                         )}
                     </div>
                 </div>
             )}
 
-            {/* 底部输入区 */}
-            <div className="p-4 border-t border-gray-700">
-
-                {/* 1️⃣ 顶部标题 */}
-                <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-sm font-medium text-gray-300 tracking-wide">
-                        Configure Your Trip
-                    </h3>
-                    <button className="flex items-center text-gray-400 hover:text-purple-400 text-xs transition-colors">
-                        Expand
-                        <svg
-                            className="w-3.5 h-3.5 ml-1"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                        >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
-                        </svg>
-                    </button>
-                </div>
-
-                {/* 2️⃣ Vibe 标签 */}
-                <div className="flex flex-wrap gap-2 mb-3">
-                    {["Food", "Adventure"].map((vibe) => (
+            {/* 配置区域 */}
+            <div className="border-t border-gray-700">
+                <div className="p-4 space-y-4">
+                    {/* 顶部标题 */}
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-medium text-gray-300 tracking-wide">
+                            Configure Your Trip
+                        </h3>
                         <button
-                            key={vibe}
-                            className="px-3 py-1.5 bg-gray-700/70 text-xs text-gray-200 rounded-full border border-gray-600 hover:border-purple-500 hover:text-white hover:bg-gray-700 transition-all"
+                            onClick={toggleConfigExpanded}
+                            className="flex items-center text-gray-400 hover:text-purple-400 text-xs transition-colors"
                         >
-                            {vibe}
-                        </button>
-                    ))}
-                </div>
-
-                {/* 3️⃣ 三个配置按钮区块 */}
-                <div className="flex flex-nowrap items-center gap-3 mb-3">
-                    {/* 日期选择器 - 固定宽度 */}
-                    <div className="flex-shrink-0">
-                        <DropdownButton
-                            triggerContent={<span className="text-xs text-gray-200 whitespace-nowrap">{dateRange}</span>}
-                            triggerIcon={dateIcon}
-                            dropdownClassName="absolute bottom-full mb-2 left-0 z-20"
-                        >
-                            <DateRangePicker />
-                        </DropdownButton>
-                    </div>
-
-                    {/* 人数选择器 - 固定宽度 */}
-                    <div className="flex-shrink-0">
-                        <DropdownButton
-                            triggerContent={<span className="text-xs text-gray-200 whitespace-nowrap">{numPeople}</span>}
-                            triggerIcon={peopleIcon}
-                            dropdownClassName="absolute bottom-full mb-2 right-0 z-20"
-                        >
-                            <PassengerSelector />
-                        </DropdownButton>
-                    </div>
-
-                    {/* 地点选择器 - 弹性宽度 */}
-                    <div className="flex-1 min-w-0">
-                        <DropdownButton
-                            triggerContent={
-                                <span className="text-xs text-gray-200 whitespace-nowrap truncate block w-full">
-                    {location}
-                </span>
-                            }
-                            triggerIcon={locationIcon}
-                            dropdownClassName="absolute bottom-full mb-2 left-0 z-20"
-                        >
-                            <LocationSearch />
-                        </DropdownButton>
-                    </div>
-                </div>
-                {/* 聊天输入框 - 修复部分 */}
-                <div className="flex items-center bg-gray-700 rounded-lg p-2">
-                    <span className="w-6 h-6 rounded-full bg-purple-500 flex items-center justify-center text-white text-xs font-bold mr-2">A</span>
-                    <input
-                        type="text"
-                        placeholder="Ask TravelPilot..."
-                        value={inputMessage}
-                        onChange={(e) => setInputMessage(e.target.value)}
-                        onKeyPress={handleKeyPress}
-                        disabled={isLoading}
-                        className="flex-1 bg-transparent text-white placeholder-gray-400 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-                    />
-
-                    <button
-                        onClick={handleChatSubmit}
-                        disabled={isLoading}
-                        className={`ml-2 ${isLoading ? 'text-gray-600 cursor-not-allowed' : 'text-gray-400 hover:text-white'}`}
-                    >
-                        {isLoading ? (
-                            <svg className="animate-spin h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            {isConfigExpanded ? 'Collapse' : 'Expand'}
+                            <svg
+                                className={`w-3.5 h-3.5 ml-1 transition-transform ${isConfigExpanded ? '' : 'rotate-180'}`}
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                                      d="M19 9l-7 7-7-7"></path>
                             </svg>
-                        ) : (
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
-                        )}
-                    </button>
-                </div>
-                <p className="text-xs text-gray-500 mt-2">
-                    TravelPilot is in beta and can make mistakes. Please check important info.
-                </p>
-            </div>
+                        </button>
+                    </div>
+                    {/* 展开的内容 */}
+                    {isConfigExpanded && (
+                        <>
+                            {/* Vibe 选择器 */}
+                            <div className="flex items-start gap-3">
+                                <div className="flex-1">
+                                    <VibeSelector />
+                                </div>
+                            </div>
 
+                            {/* 第一行：日期、人数、预算 */}
+                            <div className="flex gap-3">
+                                {/* 日期 */}
+                                <DropdownButton
+                                    className="flex-1 min-w-0"
+                                    triggerContent={<span className="text-xs text-gray-200 truncate">{dateRange}</span>}
+                                    triggerIcon={dateIcon}
+                                    dropdownClassName="absolute bottom-full mb-2 left-0 z-20"
+                                >
+                                    <DateRangePicker/>
+                                </DropdownButton>
+
+                                {/* 人数 */}
+                                <DropdownButton
+                                    className="flex-shrink-0"
+                                    triggerContent={<span className="text-xs text-gray-200">{numPeople}</span>}
+                                    triggerIcon={peopleIcon}
+                                    dropdownClassName="absolute bottom-full mb-2 right-0 z-20"
+                                >
+                                    <PassengerSelector/>
+                                </DropdownButton>
+
+                                {/* 预算 */}
+                                <DropdownButton
+                                    className="flex-1 min-w-0"
+                                    triggerContent={<span className="text-xs text-gray-200 truncate">{budgetDisplay}</span>}
+                                    triggerIcon={budgetIcon}
+                                    dropdownClassName="absolute bottom-full mb-2 right-0 z-20"
+                                >
+                                    <BudgetSelector/>
+                                </DropdownButton>
+                            </div>
+
+                            {/* 第二行：出发地、目的地 */}
+                            <div className="flex gap-3">
+                                {/* 出发地 */}
+                                <DropdownButton
+                                    className="flex-1 min-w-0"
+                                    triggerContent={<span className="text-xs text-gray-200 truncate">{departure}</span>}
+                                    triggerIcon={departureIcon}
+                                    dropdownClassName="absolute bottom-full mb-2 left-0 z-20"
+                                >
+                                    <LocationSearch locationType="departure"/>
+                                </DropdownButton>
+
+                                {/* 目的地 */}
+                                <DropdownButton
+                                    className="flex-1 min-w-0"
+                                    triggerContent={<span className="text-xs text-gray-200 truncate">{destination}</span>}
+                                    triggerIcon={locationIcon}
+                                    dropdownClassName="absolute bottom-full mb-2 left-0 z-20"
+                                >
+                                    <LocationSearch locationType="destination"/>
+                                </DropdownButton>
+                            </div>
+                        </>
+                    )}
+
+                    {/* 聊天输入框 - 始终显示 */}
+                    <div className="flex items-center bg-gray-700 rounded-lg p-2">
+                        <span
+                            className="w-6 h-6 rounded-full bg-purple-500 flex items-center justify-center text-white text-xs font-bold mr-2">A</span>
+                        <input
+                            type="text"
+                            placeholder="Ask TravelPilot..."
+                            value={inputMessage}
+                            onChange={(e) => setInputMessage(e.target.value)}
+                            onKeyPress={handleKeyPress}
+                            disabled={isLoading}
+                            className="flex-1 bg-transparent text-white placeholder-gray-400 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                        />
+
+                        <button
+                            onClick={handleChatSubmit}
+                            disabled={isLoading}
+                            className={`ml-2 ${isLoading ? 'text-gray-600 cursor-not-allowed' : 'text-gray-400 hover:text-white'}`}
+                        >
+                            {isLoading ? (
+                                <svg className="animate-spin h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none"
+                                     viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                            strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor"
+                                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            ) : (
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                     xmlns="http://www.w3.org/2000/svg">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                                          d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+                                </svg>
+                            )}
+                        </button>
+                    </div>
+
+                    <p className="text-xs text-gray-500 text-center">
+                        TravelPilot is in beta and can make mistakes. Please check important info.
+                    </p>
+                </div>
+            </div>
         </div>
     );
 };
+
 
 export default ChatSider;
 
