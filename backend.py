@@ -1,4 +1,6 @@
 import re
+import httpx
+import json
 import asyncio
 from textwrap import dedent
 from agno.agent import Agent
@@ -10,9 +12,24 @@ from datetime import datetime, timedelta
 import os
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import List, Optional
-
+from flight_service import SimpleFlightService
+from datetime import datetime
+from google_maps_utils import get_place_photo_url
+from models import (
+    TravelInfo,
+    ChatRequest,
+    TripOverview,
+    DailyItinerary,
+    DailyItineraryResponse,
+    Flight,
+    Hotel,
+    PriceSummary,
+    ItineraryResponse,
+    TravelPlanRequest
+)
 
 app = FastAPI(title="MCP AI Travel Planner API")
 
@@ -74,8 +91,47 @@ def generate_ics_content(plan_text: str, start_date: datetime = None) -> bytes:
 
     return cal.to_ical()
 
+class ProgressManager:
+    def __init__(self):
+        self.progress_queues = {}
 
-async def run_mcp_travel_planner(destination: str, num_days: int, num_people: int, budget: int, openai_key: str, google_maps_key: str):
+    async def add_progress(self, request_id: str, message: str, progress_type: str = "info"):
+        """添加进度消息"""
+        if request_id in self.progress_queues:
+            progress_data = {
+                "type": progress_type,
+                "message": message,
+                "timestamp": datetime.now().isoformat()
+            }
+            await self.progress_queues[request_id].put(progress_data)
+
+    async def get_progress_stream(self, request_id: str):
+        """获取进度流"""
+        self.progress_queues[request_id] = asyncio.Queue()
+        try:
+            while True:
+                progress_data = await self.progress_queues[request_id].get()
+                yield f"data: {json.dumps(progress_data)}\n\n"
+        except asyncio.CancelledError:
+            del self.progress_queues[request_id]
+
+progress_manager = ProgressManager()
+
+# 添加 SSE 端点
+@app.get("/api/progress/{request_id}")
+async def progress_stream(request_id: str):
+    """进度流端点"""
+    return StreamingResponse(
+        progress_manager.get_progress_stream(request_id),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Access-Control-Allow-Origin": "*",
+        }
+    )
+
+async def run_mcp_travel_planner(destination: str, num_days: int, num_people: int, budget: int, openai_key: str, google_maps_key: str,request_id: str = None):
     """Run the MCP-based travel planner agent with real-time data access."""
     # for test
     print("@@@@@@@@@@@@@@@@  Start  @@@@@@@@@@@@@@@@@@@@@@@@")
@@ -100,7 +156,9 @@ async def run_mcp_travel_planner(destination: str, num_days: int, num_people: in
 
         # Connect to Airbnb MCP server
         await mcp_tools.connect()
-        
+
+        if request_id:
+            await progress_manager.add_progress(request_id, "🤖 Create an AI travel agent", "info")
 
         travel_planner = Agent(
             name="Travel Planner",
@@ -114,128 +172,39 @@ async def run_mcp_travel_planner(destination: str, num_days: int, num_people: in
         )
         print("Success create Agent")
 
-        # Create the planning prompt
-        prompt = f"""
-        You are a professional travel consultant AI that creates highly detailed travel itineraries directly without asking questions.
+        with open('./prompt.md', "r", encoding="utf-8") as f:
+            prompt_template = f.read()
 
-        You have access to:
-        🏨 Airbnb listings with real availability and current pricing
-        🗺️ Google Maps MCP for location services, directions, distance calculations, and local navigation
-        🔍 Web search capabilities for current information.
-
-        IMMEDIATELY create an extremely detailed and comprehensive travel itinerary for:
-
-        **Destination:** {destination}
-        **Duration:** {num_days} days
-        **People:** {num_people} 
-        **Total Budget:** ${budget} HKD
-        **ABSOLUTE REQUIREMENT: The output MUST include complete itineraries for all {num_days} days,you MUST output ONLY valid JSON format, do not include any additional text, explanations, or markdown, otherwise it will be rejected**
-    
-            DO NOT ask any questions. Generate a complete, highly detailed itinerary now using all available tools.
-    
-            **CRITICAL REQUIREMENTS:**
-            - Use Google Maps MCP to calculate distances and travel times between ALL locations
-            - Include specific addresses for every location, restaurant, and attraction
-            - Calculate precise costs for transportation between each location
-            - Include opening hours, ticket prices, and best visiting times for all attractions
-    
-            **JSON OUTPUT STRUCTURE:**
-            The output must be a JSON object with the following structure:
-    
-            - "trip_overview": an object containing:
-              - "destination": string
-              - "duration_days": number
-              - "people": number 
-              - "total_budget_hkd": number
-              - "summary": string
-              - "main_attractions": array of strings
-    
-            - "accommodation": an array of objects, each containing:
-              - "name": string
-              - "address": string
-              - "price_per_night_hkd": number
-              - "amenities": array of strings
-              - "link": string
-              - "rating": number
-    
-            - "daily_itinerary": an array of objects, each representing a FULL day itinerary, containing:
-              - "day": number (starting from Day 1 until Day {num_days})
-              - "date": string (optional, in YYYY-MM-DD format if available)
-              - "day_summary": string (brief overview of the day's theme)
-              - "activities": array of activity objects, each containing:
-                - "start_time": string (format: "HH:MM", e.g., "09:00")
-                - "end_time": string (format: "HH:MM", e.g., "12:30")
-                - "activity_name": string
-                - "description": string (detailed description of the activity)
-                - "address": string (specific physical address)
-                - "cost_hkd": number
-                - "travel_info": object with:
-                  - "from_previous_duration_minutes": number
-                  - "from_previous_distance_km": number
-                  - "transportation_mode": string (e.g., "walking", "taxi", "subway", "bus")
-                - "attraction_info": object with:
-                  - "opening_hours": string
-                  - "ticket_price_hkd": number
-                  - "best_visit_time": string
-    
-            - "budget_breakdown": an object containing:
-              - "accommodation_total_hkd": number
-              - "activities_total_hkd": number
-              - "transportation_total_hkd": number
-              - "food_total_hkd": number
-              - "remaining_budget_hkd": number
-    
-        **IMPORTANT DAILY ITINERARY REQUIREMENTS:**
-        1. You MUST generate a COMPLETE day-by-day itinerary for ALL {num_days} days
-        2. Each day must include a FULL schedule from morning to evening
-        3. Every activity must have specific time slots (start_time and end_time)
-        4. Include realistic travel times between locations using transportation data
-        5. All activities must have specific addresses and cost estimates
-        
-        **VERIFICATION CHECKLIST (Check before outputting):**
-        ✓ daily_itinerary array contains exactly {num_days} objects
-        ✓ Each object has "day" field (from 1 to {num_days})
-        ✓ All time slots are sequential and realistic
-        ✓ All addresses are real and specific
-        ✓ All costs are accurately calculated
-        ✓ There is a budget_breakdown
-        ✓ Output is ONLY valid JSON format, not include any additional text, explanations, or markdown(no ```json  ```)
-        ✓ The budget must not exceed
-
-        Use Airbnb MCP for real accommodation data, Google Maps MCP for ALL distance calculations and location services, and web search for current information.
-        
-        """
+        prompt = prompt_template.format(
+            destination=destination,
+            num_days=num_days,
+            num_people=num_people,
+            budget=budget
+        )
 
         response = await travel_planner.arun(prompt)
-        # test
-        print(response.content)
+
+        if request_id:
+            await progress_manager.add_progress(request_id, "Identifying the best possible route", "info")
+            await asyncio.sleep(1)
+            await progress_manager.add_progress(request_id, f"{num_days} full days to explore {destination}'s iconic spots andhidden gems.", "detail")
 
         return response.content
 
     finally:
         await mcp_tools.close()
 
-# Request models
-class TravelPlanRequest(BaseModel):
-    destination: str
-    departure: str
-    num_days: int
-    num_people: int
-    # preferences: str
-    budget: float
-    # start_date: Optional[str] = None
-
 @app.get("/")
 async def root():
     return {"message": "MCP AI Travel Planner API"}
 
 
-async def generate_itinerary(request: TravelPlanRequest):
+async def generate_itinerary(request: TravelPlanRequest,request_id: str = None):
     """
     生成旅行行程
     """
-    openai_key=os.getenv("OPENROUTER_API_KEY")
-    googlemap_key=os.getenv("GOOGLE_MAP_KEY")
+    openai_key = os.getenv("OPENROUTER_API_KEY")
+    googlemap_key = os.getenv("GOOGLE_MAP_KEY")
     try:
         itinerary = await run_mcp_travel_planner(
             destination=request.destination,
@@ -243,11 +212,10 @@ async def generate_itinerary(request: TravelPlanRequest):
             num_people=request.num_people,
             budget=request.budget,
             openai_key=openai_key,
-            google_maps_key=googlemap_key
-            #openai_key=request.openai_key,
-            #google_maps_key=request.google_maps_key
+            google_maps_key=googlemap_key,
+            request_id=request_id
         )
-        
+
         return {
             "success": True,
             "itinerary": itinerary,
@@ -256,6 +224,43 @@ async def generate_itinerary(request: TravelPlanRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"生成行程时出错: {str(e)}")
 
+async def get_airbnb_images(room_url: str):
+    """
+    获取 Airbnb 房源图片的代理接口
+    """
+    try:
+        print(f"正在获取 Airbnb 房源图片: {room_url}")
+        
+        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            }
+            
+            response = await client.get(room_url, headers=headers)
+            response.raise_for_status()
+            
+            # 查找JSON-LD数据
+            json_ld_pattern = r'<script type="application/ld\+json">(.*?)</script>'
+            matches = re.findall(json_ld_pattern, response.text, re.DOTALL)
+            
+            image_urls = []
+            for match in matches:
+                try:
+                    data = json.loads(match)
+                    if 'image' in data:
+                        if isinstance(data['image'], str):
+                            image_urls.append(data['image'])
+                        elif isinstance(data['image'], list):
+                            image_urls.extend(data['image'][:3])
+                except:
+                    continue
+            
+            print(f"找到 {len(image_urls)} 张图片")
+            return image_urls[:1]  # 返回第一张图片
+            
+    except Exception as e:
+        print(f"获取 Airbnb 图片失败: {e}")
+        return []
 
 @app.post("/api/download-calendar")
 async def download_calendar(request: dict):
@@ -292,72 +297,6 @@ async def download_calendar(request: dict):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"生成日历文件时出错: {str(e)}")
 
-
-
-
-# --- 请求体 ---
-class TravelInfo(BaseModel):
-    destination: str
-    departure: str
-    num_days: int
-    num_people: int
-    budget: float
-
-class ChatRequest(BaseModel):
-    message: str
-    vibe: Optional[List[str]] = None
-    chat_history: Optional[List[dict]] = None  # (可选) 用于上下文
-    travel_info:Optional[TravelInfo] = None
-
-# --- 响应体 (与 UI 完全匹配) ---
-
-
-class TripOverview(BaseModel):
-    title: str
-    image_url: str
-    location: str
-    country: str
-    date_range: str
-    description: str
-
-
-class Flight(BaseModel):
-    origin: str
-    destination: str
-    departure_time: str
-    departure_date: str
-    arrival_time: str
-    arrival_date: str
-    duration: str
-    airline: str
-    airline_logo_url: str  # UI 上的航空公司 Logo
-    nonstop: bool
-
-
-class Hotel(BaseModel):
-    name: str
-    image_url: str
-    rating: float
-    review_count: int
-    price_per_night: int
-    currency: str
-
-
-class PriceSummary(BaseModel):
-    flights_total: int
-    hotels_total: int
-    grand_total: int
-    currency: str
-
-
-class ItineraryResponse(BaseModel):
-    ai_response: str
-    trip_overview: TripOverview
-    flights: List[Flight]
-    hotels: List[Hotel]
-    price_summary: PriceSummary
-
-
 # -----------------------------------------------
 # 4. 创建 API 终结点 (Endpoint)
 # -----------------------------------------------
@@ -370,18 +309,9 @@ async def handle_chat(request: ChatRequest):
     if request.travel_info:
         print(f"✅ 收到 Travel Info: {request.travel_info}")        
 
-    # --- 这是模拟数据 (Mock Data) ---
-    # 你的 AI (Gemini / GPT) 和 RAG 流程最终会生成这些数据。
-    # 现在，我们先返回图片中的内容。
-
-    mock_overview = TripOverview(
-        title="Winter Feasts in Osaka's Food Paradise",
-        image_url="https://example.com/images/osaka_castle.jpg",  # 替换为真实的图片 URL
-        location="Osaka",
-        country="Japan",
-        date_range="Feb 6 - 12",
-        description="Dive into thrills at Universal Studios Japan, silver street food and noon at Dotonbori, and most sacred door at Na..."
-    )
+    if request.travel_info:
+        print(f"✅ 收到 request_id: {request.request_id}")
+        request_id = request.request_id
 
     mock_flights = [
         Flight(
@@ -393,7 +323,6 @@ async def handle_chat(request: ChatRequest):
             arrival_date="Feb 6",
             duration="3h25m",
             airline="Cathay Pacific",
-            airline_logo_url="https://example.com/logo/cx.png",  # 替换为 Logo URL
             nonstop=True
         ),
         Flight(
@@ -405,34 +334,12 @@ async def handle_chat(request: ChatRequest):
             arrival_date="Feb 12",
             duration="4h25m",
             airline="HK Express",
-            airline_logo_url="https://example.com/logo/hk.png",  # 替换为 Logo URL
             nonstop=True
         )
     ]
 
-    mock_hotels = [
-        Hotel(
-            name="The Royal Park Hotel Iconic Osaka Midosuji",
-            image_url="https://example.com/images/hotel_room.jpg",  # 替换为真实的图片 URL
-            rating=4.7,
-            review_count=1234,
-            price_per_night=37,  # (221 / 6 nights ≈ 37 per night)
-            currency="SGD"
-        )
-    ]
-
-    mock_price = PriceSummary(
-        flights_total=332,
-        hotels_total=221,
-        grand_total=554,  # 332 + 221
-        currency="SGD"
-    )
-
-    mock_ai_response = "Osaka in February - plum blossoms and amazing winter comfort food! Here are some incredible experiences waiting for you in Japan's kitchen."
-    
+    flight_service = SimpleFlightService()
     travel_info=request.travel_info
-
-    print(travel_info)
 
     response = await generate_itinerary(
         TravelPlanRequest(
@@ -441,16 +348,133 @@ async def handle_chat(request: ChatRequest):
             num_days=travel_info.num_days, 
             num_people=travel_info.num_people, 
             budget=travel_info.budget
-        )
+        ),
+        request_id=request_id  # 传递请求ID
     )
+
+    itinerary_data = json.loads(response.get("itinerary", {}))
+
+    start_date = datetime.strptime(travel_info.start_date, '%a %b %d %Y')
+    end_date = datetime.strptime(travel_info.end_date, '%a %b %d %Y')
+    departure_date = start_date.strftime('%Y-%m-%d')
+    return_date = end_date.strftime('%Y-%m-%d')
+
+    overview = itinerary_data["trip_overview"]
+    real_overview = TripOverview(
+        title=overview['title'],
+        image_url=get_place_photo_url(overview["destination"],os.getenv("GOOGLE_MAP_KEY")),
+        location=overview['destination'],
+        date_range=travel_info.start_date + ' - ' + travel_info.end_date,
+        description=overview['summary']
+    )
+
+    # 每日行程信息
+    daily_data = []
+    days_info = itinerary_data["daily_itinerary"]
+    for day_info in days_info:
+        for activity in day_info["activities"]:
+            url = get_place_photo_url(activity["address"],os.environ["GOOGLE_MAPS_API_KEY"])
+            if(url == None):
+                url = ""
+            daily_itinerary = DailyItinerary(
+                start_time=activity["start_time"],
+                end_time=activity["end_time"],
+                activity=activity["activity_name"],
+                image_url=url
+            )
+            daily_data.append({
+                "day": day_info["day"],
+                "itinerary": daily_itinerary
+            })
+
+     # 搜索航班
+    if request_id:
+        await asyncio.sleep(1)
+        await progress_manager.add_progress(request_id, "Searching for flights", "info")
+
+    outbound_flights, inbound_flights = flight_service.get_round_trip_flights(
+        departure_city=travel_info.departure.lower(),
+        destination_city=travel_info.destination.lower(),
+        num_people=travel_info.num_people,
+        budget=travel_info.budget,
+        departure_date=departure_date,
+        return_date=return_date
+    )
+
+    real_flights = []
+
+    if outbound_flights and inbound_flights:
+        best_outbound = outbound_flights[0]
+        best_inbound = inbound_flights[0]
+
+        # 解析去程/返程航段
+        seg_out = best_outbound['itineraries'][0]['segments'][0]
+        seg_in = best_inbound['itineraries'][0]['segments'][0]
+        dur_out = best_outbound['itineraries'][0]['duration']
+        dur_in = best_inbound['itineraries'][0]['duration']
+
+        real_flights = [
+            flight_service.extract_flight(seg_out, dur_out, travel_info.departure, travel_info.destination),
+            flight_service.extract_flight(seg_in, dur_in, travel_info.destination, travel_info.departure)
+        ]
+    else:
+        real_flights = mock_flights
+
+    if request_id:
+        await progress_manager.add_progress(request_id, f"Direct flights from {travel_info.departure} to {travel_info.destination} take about {dur_out.replace('PT','').lower()} each way.", "detail")
+
+    if request_id:
+        await asyncio.sleep(1)
+        await progress_manager.add_progress(request_id, "Searching for hotels", "info")
+
+    real_hotels = []
+    accommodation_data = itinerary_data["accommodation"]
+    for acc in accommodation_data:
+        # 获取 Airbnb 图片
+        image_url = ""
+        if acc.get("link") and "airbnb.com" in acc["link"]:
+            images = await get_airbnb_images(acc["link"])
+            if images:
+                image_url = images[0]
+        hotel = Hotel(
+            name=acc.get("name", ""),
+            image_url=image_url,
+            rating=acc.get("rating", 0),
+            review_count=acc.get("review_count", 0),
+            price_per_night=int(acc.get("price_per_night_hkd", 0)),
+            currency="HKD",
+            address=acc.get("address", ""),
+            amenities=acc.get("amenities", []),
+            link=acc.get("link", "")
+        )
+        
+        real_hotels.append(hotel)
+
+    real_price = PriceSummary(
+            flights_total=int(float(best_outbound['price']['total']) + float(best_inbound['price']['total']))*9,
+            hotels_total=int(itinerary_data["budget_breakdown"]["accommodation_total_hkd"]),
+            grand_total=int(travel_info.budget-itinerary_data["budget_breakdown"]["remaining_budget_hkd"]) ,  # 332 + 221
+            currency="HKD"
+        )
+
+    if request_id:
+        await asyncio.sleep(1)
+        await progress_manager.add_progress(request_id, "Creating an itinerary", "info")
+        await asyncio.sleep(1)
+        await progress_manager.add_progress(request_id, f"I've focused on {travel_info.destination}'s iconic highlights perfect for your short visit.", "detail")
+        await progress_manager.add_progress(request_id, "I made sure to include must-see attractions for that iconic experience!", "detail")
+        await asyncio.sleep(1)
+        await progress_manager.add_progress(request_id, "Trip Generated!", "success")
 
     # --- 返回完整的响应 ---
     return ItineraryResponse(
-        ai_response=response.get("itinerary"),
-        trip_overview=mock_overview,
-        flights=mock_flights,
-        hotels=mock_hotels,
-        price_summary=mock_price
+        # ai_response=response.get("itinerary"),
+        ai_response="",
+        trip_overview=real_overview,
+        daily_itinerary=daily_data,
+        flights=real_flights,
+        hotels=real_hotels,
+        price_summary=real_price
     )
 
 if __name__ == "__main__":

@@ -41,11 +41,10 @@ const DateRangePicker = () => {
     // 1. 【状态】使用完整的 Date 对象
     const [startDate, setStartDate] = useState(getInitialStartDate);
     const [endDate, setEndDate] = useState(getInitialEndDate);
+    const [errorMessage, setErrorMessage] = useState('');
 
-    // 状态：管理当前显示的月份 - 修复这里！
-    // 使用用户选择的日期或者默认日期，而不是硬编码的2026年2月1日
+    // 状态：管理当前显示的月份
     const [currentDate, setCurrentDate] = useState(() => {
-        // 优先使用用户选择的开始日期，否则使用默认的开始日期
         const userStartDate = getInitialStartDate();
         return new Date(userStartDate.getFullYear(), userStartDate.getMonth(), 1);
     });
@@ -63,8 +62,8 @@ const DateRangePicker = () => {
                 });
             };
             updateTravelInfo({
-                startDate: startDate.toISOString(),
-                endDate: endDate.toISOString(),
+                startDate: startDate.toDateString(),
+                endDate: endDate.toDateString(),
                 dateRange: `${formatDate(start)} - ${formatDate(end)}`,
                 numDays: numDays
             });
@@ -86,21 +85,30 @@ const DateRangePicker = () => {
         setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
     };
 
-    // 4. 【日期点击】处理
+    // 4. 【日期点击】处理 - 添加3天限制
     const handleDayClick = (day) => {
         const clickedDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+        setErrorMessage(''); // 清空错误信息
 
         if (!startDate || (startDate && endDate)) {
             // 开始新的选择 (或重置)
             setStartDate(clickedDate);
             setEndDate(null);
-        } else if (!endDate && clickedDate >= startDate) {
-            // 设置结束日期
-            setEndDate(clickedDate);
-        } else {
-            // 如果选择的日期早于开始日期，则重置
-            setStartDate(clickedDate);
-            setEndDate(null);
+        } else if (!endDate) {
+            // 检查是否超过3天限制
+            const daysDifference = getDaysDifference(startDate, clickedDate);
+            if (daysDifference > 3) {
+                setErrorMessage('行程天数不能超过3天');
+                return;
+            }
+            if (clickedDate >= startDate) {
+                // 设置结束日期
+                setEndDate(clickedDate);
+            } else {
+                // 如果选择的日期早于开始日期，则重置
+                setStartDate(clickedDate);
+                setEndDate(null);
+            }
         }
     };
 
@@ -119,7 +127,7 @@ const DateRangePicker = () => {
 
     const dayCells = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
-    // 6. 【UI ClassName 函数】
+    // 6. 【UI ClassName 函数】- 添加禁用状态
     const getCellClassName = (day) => {
         const date = new Date(year, month, day);
         let classes = "w-9 h-9 flex items-center justify-center relative";
@@ -138,27 +146,59 @@ const DateRangePicker = () => {
 
     const getDayClassName = (day) => {
         const date = new Date(year, month, day);
-        let classes = "w-9 h-9 flex items-center justify-center rounded-full cursor-pointer";
+        let classes = "w-9 h-9 flex items-center justify-center rounded-full";
 
-        if (isSameDay(date, startDate) || isSameDay(date, endDate)) {
-            classes += " bg-purple-600 text-white";
+        // 检查日期是否可选（不超过3天限制）
+        const isSelectable = () => {
+            if (!startDate || endDate) return true;
+            const daysDifference = getDaysDifference(startDate, date);
+            return daysDifference <= 3;
+        };
+
+        const selectable = isSelectable();
+
+        if (!selectable) {
+            classes += " text-gray-500 cursor-not-allowed opacity-50";
+        } else if (isSameDay(date, startDate) || isSameDay(date, endDate)) {
+            classes += " bg-purple-600 text-white cursor-pointer";
         } else if (isBetween(date, startDate, endDate)) {
-            classes += " text-white";
+            classes += " text-white cursor-pointer";
         } else {
-            classes += " text-gray-200 hover:bg-gray-700";
+            classes += " text-gray-200 hover:bg-gray-700 cursor-pointer";
         }
         return classes;
     };
 
+    // 检查日期是否可点击
+    const isDayClickable = (day) => {
+        const date = new Date(year, month, day);
+        if (!startDate || endDate) return true;
+        const daysDifference = getDaysDifference(startDate, date);
+        return daysDifference <= 3;
+    };
+
     return (
         <div className="p-4 w-72">
-            {/* 显示当前全局状态 */}
-            <div className="mb-3 text-xs text-gray-400">
+            {/* 显示当前全局状态和错误信息 */}
+            <div className="mb-3 space-y-1">
                 {travelInfo.numDays ? (
-                    <span>行程: {travelInfo.numDays} 天</span>
+                    <div className="text-xs text-gray-400">
+                        itinerary: {travelInfo.numDays} days
+                    </div>
                 ) : (
-                    <span>请选择日期范围</span>
+                    <div className="text-xs text-gray-400">请选择日期范围</div>
                 )}
+                {errorMessage && (
+                    <div className="text-xs text-red-400 flex items-center">
+                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                        </svg>
+                        {errorMessage}
+                    </div>
+                )}
+                <div className="text-xs text-gray-500">
+                    You can choose a trip of up to 3 days.
+                </div>
             </div>
 
             <div className="flex justify-between items-center mb-3">
@@ -185,16 +225,19 @@ const DateRangePicker = () => {
             {/* 日期格子 */}
             <div className="grid grid-cols-7 text-center text-sm">
                 {emptyCells}
-                {dayCells.map(day => (
-                    <div key={day} className={getCellClassName(day)}>
-                        <div
-                            onClick={() => handleDayClick(day)}
-                            className={getDayClassName(day)}
-                        >
-                            {day}
+                {dayCells.map(day => {
+                    const clickable = isDayClickable(day);
+                    return (
+                        <div key={day} className={getCellClassName(day)}>
+                            <div
+                                onClick={clickable ? () => handleDayClick(day) : undefined}
+                                className={getDayClassName(day)}
+                            >
+                                {day}
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
         </div>
     );
