@@ -32,15 +32,32 @@ export const TravelProvider = ({ children }) => {
 
     // 更新行程数据
     const setItinerary = (data) => {
-        setState(prevState => ({
-            ...prevState,
-            itinerary: data.itinerary || data.ai_response || prevState.itinerary,
-            tripOverview: data.trip_overview || prevState.tripOverview,
-            flights: data.flights || prevState.flights,
-            hotels: data.hotels || prevState.hotels,
-            priceSummary: data.price_summary || prevState.priceSummary,
-            daily_itinerary: data.daily_itinerary || prevState.daily_itinerary,
-        }));
+        setState(prevState => {
+            // 明确处理每个字段，如果data中有该字段（即使是null），就使用它
+            const newState = { ...prevState };
+            
+            // 只有当data中明确存在该字段时才更新，否则保留原值
+            if (data.hasOwnProperty('trip_overview')) {
+                newState.tripOverview = data.trip_overview;
+            }
+            if (data.hasOwnProperty('flights')) {
+                newState.flights = data.flights || [];
+            }
+            if (data.hasOwnProperty('hotels')) {
+                newState.hotels = data.hotels || [];
+            }
+            if (data.hasOwnProperty('price_summary')) {
+                newState.priceSummary = data.price_summary;
+            }
+            if (data.hasOwnProperty('daily_itinerary')) {
+                newState.daily_itinerary = data.daily_itinerary || [];
+            }
+            if (data.hasOwnProperty('itinerary') || data.hasOwnProperty('ai_response')) {
+                newState.itinerary = data.itinerary || data.ai_response || null;
+            }
+            
+            return newState;
+        });
     };
 
     // 添加聊天消息

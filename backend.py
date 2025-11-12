@@ -33,10 +33,18 @@ from models import (
     ItineraryResponse,
     TravelPlanRequest
 )
+from database.supabase_client import SupabaseClient
+from database.auth import router as auth_router
+from fastapi import Depends, Header
+from typing import Optional
 
 
 app = FastAPI(title="MCP AI Travel Planner API")
 load_dotenv()
+
+# 初始化Supabase客户端
+supabase_client = SupabaseClient()
+
 # 配置 CORS，允许 React 前端访问
 app.add_middleware(
     CORSMiddleware,
@@ -45,6 +53,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 注册认证路由
+app.include_router(auth_router)
 
 def generate_ics_content(plan_text: str, start_date: datetime = None) -> bytes:
     """
@@ -191,7 +202,7 @@ async def run_mcp_travel_planner(destination: str, num_days: int, num_people: in
         if request_id:
             await progress_manager.add_progress(request_id, "Identifying the best possible route", "info")
             await asyncio.sleep(1)
-            await progress_manager.add_progress(request_id, f"{num_days} full days to explore Tokyo's iconic spots andhidden gems.", "detail")
+            await progress_manager.add_progress(request_id, f"{num_days} full days to explore {destination}'s iconic spots andhidden gems.", "detail")
 
         return response.content
 
@@ -479,6 +490,141 @@ async def handle_chat(request: ChatRequest):
         hotels=real_hotels,
         price_summary=real_price
     )
+
+# ============================================
+# 历史记录相关API端点
+# ============================================
+
+def get_user_id_from_token(authorization: Optional[str] = Header(None)) -> Optional[str]:
+    """从请求头中提取用户ID"""
+    if not authorization:
+        return None
+    try:
+        # 格式: "Bearer <token>" 或直接是user_id
+        if authorization.startswith("Bearer "):
+            token = authorization.replace("Bearer ", "")
+            # 验证Google ID token并提取user_id
+            try:
+                from google.oauth2 import id_token
+                from google.auth.transport import requests
+                import os
+                
+                google_client_id = os.getenv("GOOGLE_CLIENT_ID")
+                if google_client_id:
+                    idinfo = id_token.verify_oauth2_token(
+                        token,
+                        requests.Request(),
+                        google_client_id
+                    )
+                    return idinfo.get("sub")  # Google user ID
+            except:
+                # 如果验证失败，尝试直接使用token作为user_id（简化处理）
+                pass
+            return token
+        return authorization
+    except:
+        return None
+
+@app.post("/api/plans/save")
+async def save_plan(
+    plan_data: dict,
+    user_id: Optional[str] = Depends(get_user_id_from_token)
+):
+    """保存旅游计划"""
+    if not user_id:
+        raise HTTPException(status_code=401, detail="未授权，请先登录")
+    
+    try:
+        # 调试：打印接收到的数据
+        print(f"收到保存请求，user_id: {user_id}")
+        print(f"plan_data keys: {plan_data.keys()}")
+        print(f"trip_overview: {plan_data.get('trip_overview')}")
+        print(f"flights: {len(plan_data.get('flights', []))} 条")
+        print(f"hotels: {len(plan_data.get('hotels', []))} 条")
+        print(f"daily_itinerary: {len(plan_data.get('daily_itinerary', []))} 条")
+        
+        # 构建保存的数据
+        # 注意：plan_data已经包含了所有需要的信息（title, destination, trip_overview, flights等）
+        # 直接传递plan_data，让create_travel_plan提取需要的字段并保存完整的plan_data
+        result = supabase_client.create_travel_plan(user_id, plan_data)
+        
+        if result:
+            print(f"保存成功，plan_id: {result.get('id')}")
+            return {
+                "success": True,
+                "message": "计划保存成功",
+                "plan_id": result.get("id")
+            }
+        else:
+            raise HTTPException(status_code=500, detail="保存失败")
+    except Exception as e:
+        print(f"保存计划时出错: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"保存计划时出错: {str(e)}")
+
+@app.get("/api/plans")
+async def get_plans(
+    user_id: Optional[str] = Depends(get_user_id_from_token)
+):
+    """获取用户的所有旅游计划"""
+    if not user_id:
+        raise HTTPException(status_code=401, detail="未授权，请先登录")
+    
+    try:
+        plans = supabase_client.get_user_plans(user_id)
+        return {
+            "success": True,
+            "plans": plans
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取计划列表时出错: {str(e)}")
+
+@app.get("/api/plans/{plan_id}")
+async def get_plan(
+    plan_id: str,
+    user_id: Optional[str] = Depends(get_user_id_from_token)
+):
+    """获取单个旅游计划"""
+    if not user_id:
+        raise HTTPException(status_code=401, detail="未授权，请先登录")
+    
+    try:
+        plan = supabase_client.get_plan_by_id(plan_id, user_id)
+        if plan:
+            return {
+                "success": True,
+                "plan": plan
+            }
+        else:
+            raise HTTPException(status_code=404, detail="计划不存在")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取计划时出错: {str(e)}")
+
+@app.delete("/api/plans/{plan_id}")
+async def delete_plan(
+    plan_id: str,
+    user_id: Optional[str] = Depends(get_user_id_from_token)
+):
+    """删除旅游计划"""
+    if not user_id:
+        raise HTTPException(status_code=401, detail="未授权，请先登录")
+    
+    try:
+        success = supabase_client.delete_plan(plan_id, user_id)
+        if success:
+            return {
+                "success": True,
+                "message": "计划删除成功"
+            }
+        else:
+            raise HTTPException(status_code=500, detail="删除失败")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"删除计划时出错: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn
