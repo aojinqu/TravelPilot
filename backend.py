@@ -16,9 +16,10 @@ from pydantic import BaseModel
 from typing import List, Optional
 from flight_service import SimpleFlightService
 from datetime import datetime
+from dotenv import load_dotenv
 
 app = FastAPI(title="MCP AI Travel Planner API")
-
+load_dotenv()
 # 配置 CORS，允许 React 前端访问
 app.add_middleware(
     CORSMiddleware,
