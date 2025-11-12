@@ -1,13 +1,12 @@
 // components/Header.jsx
 
-import React, { useState, useRef, useEffect } from 'react';
 import { useTravel } from '../context/TravelContext';
 
 const Header = () => {
     const { tripOverview, priceSummary, travelInfo} = useTravel();
 
     // ... 你的默认值和数据提取逻辑 (保持不变) ...
-    const title = tripOverview?.title || "Winter Feasts in Osaka's Food Paradise";
+    const title = tripOverview?.title || "TravelPilot";
     const totalPrice = priceSummary
         ? `${priceSummary.currency} ${priceSummary.grand_total}`
         : "HKD  0";

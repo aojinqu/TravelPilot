@@ -1,9 +1,10 @@
 // components/MainContent.jsx
-import React from 'react';
+import React, { useState } from 'react';
 import { useTravel } from '../context/TravelContext';
 
 const MainContent = () => {
-    const { tripOverview, flights, hotels, priceSummary, itinerary } = useTravel();
+    const { tripOverview, daily_itinerary, flights, hotels, priceSummary, itinerary } = useTravel();
+    const [showFullItinerary, setShowFullItinerary] = useState(false);
 
     // 下载日历功能
     const handleDownloadCalendar = async () => {
@@ -40,6 +41,108 @@ const MainContent = () => {
         }
     };
 
+    // 切换显示完整行程
+    const handleViewFullPlan = () => {
+        setShowFullItinerary(true);
+    };
+
+    // 返回主内容
+    const handleBackToMain = () => {
+        setShowFullItinerary(false);
+    };
+
+    // 如果显示完整行程页面
+    if (showFullItinerary) {
+        return (
+            <main className="flex-1 overflow-y-auto p-6 bg-gray-900">
+                {/* 顶部返回按钮 */}
+                <div className="flex justify-between items-center mb-6">
+                    <button
+                        onClick={handleBackToMain}
+                        className="flex items-center px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors duration-200"
+                    >
+                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                        </svg>
+                        Back to Overview
+                    </button>
+                    <button
+                        onClick={handleDownloadCalendar}
+                        disabled={!itinerary}
+                        className="flex items-center px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.102 1.101m-4.242 0a2 2 0 010 2.828l.707.707"></path>
+                        </svg>
+                        Download Calendar
+                    </button>
+                </div>
+
+                {/* 完整行程内容 */}
+                <div className="bg-gray-800 rounded-xl p-6 shadow-lg">
+                    <h1 className="text-2xl font-bold mb-6 text-white">{tripOverview?.title || "Travel Itinerary"}</h1>
+
+                {/* 使用后端数据渲染每日行程 */}
+                <div className="space-y-8">
+                    {daily_itinerary && daily_itinerary.length > 0 ? (
+                        daily_itinerary.map((dayItem, index) => {
+                            const { day, itinerary } = dayItem;
+                            return (
+
+                                <div key={index} className="border-l-2 border-purple-500 pl-6 relative">
+                                    {/* 日期标题 */}
+                                    <div className="mb-4">
+                                        <h3 className="text-lg font-bold text-white">
+                                            Day {day}
+                                        </h3>
+                                    </div>
+
+                                    {/* 活动卡片 */}
+                                    <div className="relative">
+                                        {/* 时间线圆点 */}
+                                        <div className="absolute -left-9 top-2 w-4 h-4 rounded-full bg-purple-500 border-4 border-gray-800"></div>
+
+                                        <div className="bg-gray-700 rounded-lg p-4 w-[90%] mx-auto">
+                                            <div className="flex justify-between items-start mb-2">
+                                                <h4 className="text-white font-semibold text-base">
+                                                    {itinerary.activity}
+                                                </h4>
+                                                <div className="flex items-center text-gray-400 text-sm bg-gray-600 px-2 py-1 rounded w-fit ml-2">
+                                                    <span>🕒</span>
+                                                    <span className="ml-1">
+                                                        {itinerary.start_time} - {itinerary.end_time}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            {itinerary.image_url && (
+                                                <img
+                                                    src={itinerary.image_url}
+                                                    alt={itinerary.activity}
+                                                    className="rounded-lg mt-3 w-[80%] mx-0 object-cover max-h-56"
+                                                />
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* 分隔线 */}
+                                    {index < daily_itinerary.length - 1 && (
+                                        <div className="my-8 border-t border-gray-600"></div>
+                                    )}
+                                </div>
+                            );
+                        })
+                    ) : (
+                        <p className="text-gray-400 italic">No itinerary data available.</p>
+                    )}
+                </div>
+
+                </div>
+            </main>
+        );
+    }
+
+    // 原来的主内容保持不变
     return (
         <main className="flex-1 overflow-y-auto p-6 bg-gray-900">
             {/* 顶部按钮 */}
@@ -50,10 +153,13 @@ const MainContent = () => {
                     className="flex items-center px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.102 1.101m-4.242 0a2 2 0 010 2.828l.707.707"></path></svg>
-                    Download Canlendar
+                    Download Calendar
                 </button>
-                <button className="flex items-center px-4 py-2 bg-[#8965F2] text-white rounded-lg hover:bg-purple-700 transition-colors duration-200">
-                    Full Itinerary(Waiting for new page)
+                <button
+                    onClick={handleViewFullPlan}
+                    className="flex items-center px-4 py-2 bg-[#8965F2] text-white rounded-lg hover:bg-purple-700 transition-colors duration-200"
+                >
+                    Full Itinerary
                     <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
                 </button>
             </div>
@@ -62,7 +168,7 @@ const MainContent = () => {
             {tripOverview && (
                 <div className="bg-gray-800 rounded-xl p-6 mb-6 shadow-lg">
                     <h2 className="text-xl font-bold mb-4">Trip Overview</h2>
-                    <div className="relative w-full h-48 rounded-lg overflow-hidden mb-4 bg-gray-700">
+                    <div className="relative w-full h-72 rounded-lg overflow-hidden mb-4 bg-gray-700">
                         {tripOverview.image_url ? (
                             <img
                                 src={tripOverview.image_url}
@@ -77,27 +183,28 @@ const MainContent = () => {
                         <div className="w-full h-full flex items-center justify-center text-gray-400" style={{ display: tripOverview.image_url ? 'none' : 'flex' }}>
                             <span>{tripOverview.location || 'No Image'}</span>
                         </div>
-                        {/* Progress dots */}
-                        <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex space-x-2">
-                            <span className="w-2 h-2 bg-white rounded-full opacity-75"></span>
-                            <span className="w-2 h-2 bg-gray-400 rounded-full opacity-50"></span>
-                            <span className="w-2 h-2 bg-gray-400 rounded-full opacity-50"></span>
-                        </div>
                     </div>
+
                     <h3 className="text-lg font-semibold text-gray-200 mb-1">
-                        {tripOverview.location} <span className="text-sm text-gray-400">{tripOverview.country}</span>
+                        {tripOverview.title}
                     </h3>
                     <p className="text-sm text-gray-400 mb-3">{tripOverview.date_range}</p>
                     <p className="text-gray-300 mb-4">
                         {tripOverview.description}
                     </p>
-                    <button className="text-purple-400 hover:text-purple-300 text-sm font-medium">
+
+                    {/* View Full Plan 按钮 */}
+                    <button
+                        onClick={handleViewFullPlan}
+                        className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 px-4 rounded-lg font-medium transition-colors duration-200 flex items-center justify-center"
+                    >
                         View Full Plan
-                        <svg className="w-4 h-4 inline-block ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+                        <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
+                        </svg>
                     </button>
                 </div>
             )}
-
             {/* 如果没有数据，显示提示 */}
             {!tripOverview && !flights.length && !hotels.length && (
                 <div className="bg-gray-800 rounded-xl p-12 shadow-lg text-center">
@@ -213,6 +320,3 @@ const MainContent = () => {
 };
 
 export default MainContent;
-
-
-
