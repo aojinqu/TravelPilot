@@ -3,44 +3,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useTravel } from '../context/TravelContext';
 
-// ... DropdownButton 辅助组件的代码 ...
-const DropdownButton = ({ triggerContent, triggerIcon, children }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const dropdownRef = useRef(null);
-
-    useEffect(() => {
-        if (!isOpen) return;
-        const handleClickOutside = (event) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-                setIsOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, [isOpen]);
-
-    return (
-        <div className="relative" ref={dropdownRef}>
-            <button
-                onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center px-3 py-1 bg-gray-700 rounded-md hover:bg-gray-600 transition-colors duration-200"
-            >
-                {triggerIcon}
-                {triggerContent}
-                <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
-            </button>
-            {isOpen && (
-                <div className="absolute top-full mt-2 w-auto bg-gray-800 rounded-lg shadow-xl z-20 border border-gray-700">
-                    {children}
-                </div>
-            )}
-        </div>
-    );
-};
-
-
 const Header = () => {
     const { tripOverview, priceSummary, travelInfo} = useTravel();
 
