@@ -12,6 +12,7 @@ const initialState = {
     priceSummary: null,
     chatMessages: [],
     isLoading: false,
+    daily_itinerary: [],
     // 旅行信息
     travelInfo: {
         departure: null,      // 出发地点
@@ -38,6 +39,7 @@ export const TravelProvider = ({ children }) => {
             flights: data.flights || prevState.flights,
             hotels: data.hotels || prevState.hotels,
             priceSummary: data.price_summary || prevState.priceSummary,
+            daily_itinerary: data.daily_itinerary || prevState.daily_itinerary,
         }));
     };
 

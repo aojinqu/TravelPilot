@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTravel } from '../context/TravelContext';
+import { v4 as uuidv4 } from 'uuid';
 import { parseTravelInfo, validateTravelInfo, generateMissingInfoMessage } from '../utils/parseTravelInfo';
 import LocationSearch from "./LocationSearch";
 import PassengerSelector from "./PassengerSelector";
 import DateRangePicker from "./DateRangePicker";
 
-// DropdownButton 组件 (更新后的代码)
-
+// DropdownButton 组件
 const DropdownButton = ({ triggerContent, triggerIcon, children }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
@@ -35,10 +35,7 @@ const DropdownButton = ({ triggerContent, triggerIcon, children }) => {
                 <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
             </button>
             {isOpen && (
-                <div
-                    // 🚀 关键修复：从 top-full mt-2 改为 bottom-full mb-2
-                    className="absolute bottom-full mb-2 w-auto bg-gray-800 rounded-lg shadow-xl z-20 border border-gray-700"
-                >
+                <div className="absolute bottom-full mb-2 w-auto bg-gray-800 rounded-lg shadow-xl z-20 border border-gray-700">
                     {children}
                 </div>
             )}
@@ -48,6 +45,9 @@ const DropdownButton = ({ triggerContent, triggerIcon, children }) => {
 
 const ChatSider = () => {
     const [inputMessage, setInputMessage] = useState('');
+    const [progressMessages, setProgressMessages] = useState([]);
+    const [currentRequestId, setCurrentRequestId] = useState(null);
+    
     const {
         setItinerary,
         addChatMessage,
@@ -57,6 +57,7 @@ const ChatSider = () => {
         travelInfo,
         updateTravelInfo
     } = useTravel();
+    
     const messagesEndRef = useRef(null);
 
     // 自动滚动到底部
@@ -66,13 +67,78 @@ const ChatSider = () => {
 
     useEffect(() => {
         scrollToBottom();
-    }, [chatMessages, isLoading]);
+    }, [chatMessages, isLoading, progressMessages]);
+
+    // 监听进度消息
+    useEffect(() => {
+        if (!currentRequestId) {
+            console.log("❌ 没有当前请求ID，不启动进度监听");
+            return;
+        }
+
+        console.log(`🎯 开始监听进度流: http://localhost:8000/api/progress/${currentRequestId}`);
+        const eventSource = new EventSource(`http://localhost:8000/api/progress/${currentRequestId}`);
+        
+        eventSource.onmessage = (event) => {
+            console.log("📨 收到进度消息:", event.data);
+            const progressData = JSON.parse(event.data);
+            
+            setProgressMessages(prev => [...prev, {
+                type: 'progress',
+                content: progressData.message,
+                progressType: progressData.type,
+                timestamp: progressData.timestamp
+            }]);
+            
+            // 如果是完成消息，稍后关闭连接
+            if (progressData.type === 'success') {
+                setTimeout(() => {
+                    eventSource.close();
+                    setCurrentRequestId(null);
+                }, 3000);
+            }
+            
+            // 如果是错误消息，立即关闭连接
+            if (progressData.type === 'error') {
+                eventSource.close();
+                setCurrentRequestId(null);
+            }
+        };
+        
+        eventSource.onerror = (error) => {
+            console.error('Progress stream error:', error);
+            eventSource.close();
+            setCurrentRequestId(null);
+        };
+        
+        return () => {
+            eventSource.close();
+        };
+    }, [currentRequestId]);
+
+    // 格式化消息内容
+    const formatMessageContent = (content) => {
+        if (!content) return content;
+        
+        // 处理加粗文本 **text**
+        let formattedContent = content.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-yellow-300">$1</strong>');
+        
+        // 处理下拉箭头 ▼
+        formattedContent = formattedContent.replace(/▼/g, '<span class="text-blue-400">▼</span>');
+        
+        return formattedContent;
+    };
 
     const handleChatSubmit = async () => {
         if (!inputMessage.trim() || isLoading) return;
 
         const messageToSend = inputMessage.trim();
-        setInputMessage(''); // 立即清空输入框
+        setInputMessage('');
+        
+        // 生成请求ID
+        const requestId = uuidv4(); 
+        setCurrentRequestId(requestId);
+        setProgressMessages([]);
 
         // 添加用户消息到聊天历史
         const userMessage = {
@@ -81,6 +147,13 @@ const ChatSider = () => {
             timestamp: new Date().toISOString()
         };
         addChatMessage(userMessage);
+
+        // 添加分隔线
+        addChatMessage({
+            type: 'system',
+            content: '---',
+            timestamp: new Date().toISOString()
+        });
 
         // 解析用户输入中的旅行信息
         const parsedInfo = parseTravelInfo(messageToSend, travelInfo);
@@ -127,6 +200,7 @@ const ChatSider = () => {
                 content: messageToSend
             }
         ];
+        // 生成唯一 request_id
 
         try {
             // 构建发送给后端的消息，包含所有旅行信息
@@ -139,7 +213,7 @@ const ChatSider = () => {
                 },
                 body: JSON.stringify({
                     message: enrichedMessage,
-                    vibe: ["Universal Studios Japan", "Foodie"],
+                    vibe: ["Adventure", "Foodie"],
                     chat_history: updatedChatHistory,
                     travel_info: {
                         destination: updatedTravelInfo.destination,
@@ -149,7 +223,8 @@ const ChatSider = () => {
                         budget: updatedTravelInfo.budget,
                         start_date: updatedTravelInfo.startDate,
                         end_date: updatedTravelInfo.endDate
-                    }
+                    },
+                    request_id: requestId
                 }),
             });
 
@@ -159,6 +234,12 @@ const ChatSider = () => {
 
             const itineraryData = await response.json();
             console.log("收到后端数据:", itineraryData);
+            
+            // 使用后端返回的 request_id 开始监听进度
+            if (itineraryData.request_id) {
+                console.log("🎯 开始监听进度流:", itineraryData.request_id);
+                setCurrentRequestId(itineraryData.request_id);
+            }
 
             // 更新行程数据
             setItinerary(itineraryData);
@@ -189,12 +270,16 @@ const ChatSider = () => {
             handleChatSubmit();
         }
     };
-    // ... 你的默认值和数据提取逻辑 (保持不变) ...
+
+    // 默认值和数据提取逻辑
     const location = travelInfo?.destination || "Osaka";
     const dateRange = travelInfo?.dateRange || "Feb 6 - Feb 12";
     const numPeople = travelInfo?.numPeople || "1";
+    
     const dateIcon = <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>;
+    
     const peopleIcon = <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>;
+    
     const locationIcon = (
         <svg
             className="w-4 h-4 mr-1 flex-shrink-0"
@@ -217,11 +302,12 @@ const ChatSider = () => {
             ></path>
         </svg>
     );
+
     return (
         <div className="w-96 min-w-[384px] bg-gradient-to-b from-[#2A1643] to-[#3A1E5C] flex flex-col border-r border-gray-700 relative">
             {/* 聊天消息区域 */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {chatMessages.length === 0 ? (
+                {chatMessages.length === 0 && progressMessages.length === 0 ? (
                     <div className="text-center text-gray-400 mt-8 px-4">
                         <p className="text-sm font-semibold mb-4">开始您的旅行规划</p>
                         <div className="text-xs text-gray-500 space-y-2 text-left bg-gray-800/50 rounded-lg p-4">
@@ -237,21 +323,25 @@ const ChatSider = () => {
                         </div>
                     </div>
                 ) : (
-                    chatMessages.map((msg, index) => (
+                    <>
+                    {/* 渲染聊天消息 */}
+                    {chatMessages.map((msg, index) => (
                         <div
-                            key={index}
+                            key={`chat-${msg.timestamp}-${index}-${msg.type}`} 
                             className={`flex ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}
                         >
                             <div
                                 className={`max-w-[80%] rounded-lg p-3 ${
                                     msg.type === 'user'
                                         ? 'bg-purple-600 text-white'
-                                        : msg.type === 'system'
+                                        : msg.type === 'system' && msg.content !== '---'
                                         ? 'bg-yellow-900/50 border border-yellow-700 text-yellow-100'
+                                        : msg.type === 'system' && msg.content === '---'
+                                        ? 'bg-transparent border-none'
                                         : 'bg-gray-700 text-gray-200'
                                 }`}
                             >
-                                {msg.type === 'system' && (
+                                {msg.type === 'system' && msg.content !== '---' && (
                                     <div className="flex items-center mb-2">
                                         <svg className="w-4 h-4 mr-2 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -259,8 +349,14 @@ const ChatSider = () => {
                                         <span className="text-xs font-semibold text-yellow-300">提示</span>
                                     </div>
                                 )}
-                                <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                                {msg.timestamp && (
+                                
+                                {msg.content === '---' ? (
+                                    <div className="h-px bg-gray-600 w-full"></div>
+                                ) : (
+                                    <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                                )}
+                                
+                                {msg.timestamp && msg.content !== '---' && (
                                     <p className="text-xs mt-1 opacity-70">
                                         {new Date(msg.timestamp).toLocaleTimeString([], {
                                             hour: '2-digit',
@@ -270,8 +366,77 @@ const ChatSider = () => {
                                 )}
                             </div>
                         </div>
-                    ))
+                    ))}
+                    
+                    {/* 渲染进度消息 */}
+                    {progressMessages.map((msg, index) => {
+                        const isLast = index === progressMessages.length - 1;
+                        const isInfo = msg.progressType === "info";
+                        const isDetail = msg.progressType === "detail";
+                        const isSuccess = msg.progressType === "success";
+
+                        return (
+                            <div key={`progress-${msg.timestamp}-${index}`} className="relative pl-8 pb-4">
+
+                            {!isLast && (isInfo || isSuccess) && (
+                                <div className="absolute left-[12px] top-5 w-[2px] h-full bg-white/20"></div>
+                            )}
+
+                            {(isInfo || isSuccess) && (
+                                <div
+                                className={`absolute left-0 top-1 w-5 h-5 flex items-center justify-center rounded-full border-2 ${
+                                    isSuccess
+                                    ? 'border-green-400 bg-green-500/20'
+                                    : 'border-white/60 bg-transparent'
+                                }`}
+                                >
+                                {isSuccess ? (
+                                    <svg
+                                    className="w-3.5 h-3.5 text-green-400"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                    >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth="3"
+                                        d="M5 13l4 4L19 7"
+                                    />
+                                    </svg>
+                                ) : (
+                                    <div className="w-2.5 h-2.5 bg-white rounded-full opacity-80" />
+                                )}
+                                </div>
+                            )}
+
+                            <div className="ml-3">
+                                {isInfo && (
+                                <p className="font-semibold text-white text-[15px] leading-snug">
+                                    {msg.content}
+                                </p>
+                                )}
+
+                                {isDetail && (
+                                <p className="text-gray-300 text-[14px] leading-snug pl-4 mt-0.5">
+                                    {msg.content}
+                                </p>
+                                )}
+
+                                {isSuccess && (
+                                <p className="font-semibold text-green-400 text-[15px] leading-snug">
+                                    {msg.content}
+                                </p>
+                                )}
+                            </div>
+                            </div>
+                        );
+                        })}
+
+                    </>
                 )}
+                
+                {/* 加载指示器 */}
                 {isLoading && (
                     <div className="flex justify-start">
                         <div className="bg-gray-700 rounded-lg p-3">
@@ -382,8 +547,8 @@ const ChatSider = () => {
                         <DropdownButton
                             triggerContent={
                                 <span className="text-xs text-gray-200 whitespace-nowrap truncate block w-full">
-                    {location}
-                </span>
+                                    {location}
+                                </span>
                             }
                             triggerIcon={locationIcon}
                             dropdownClassName="absolute bottom-full mb-2 left-0 z-20"
@@ -392,7 +557,8 @@ const ChatSider = () => {
                         </DropdownButton>
                     </div>
                 </div>
-                {/* 聊天输入框 - 修复部分 */}
+                
+                {/* 聊天输入框 */}
                 <div className="flex items-center bg-gray-700 rounded-lg p-2">
                     <span className="w-6 h-6 rounded-full bg-purple-500 flex items-center justify-center text-white text-xs font-bold mr-2">A</span>
                     <input
@@ -420,15 +586,13 @@ const ChatSider = () => {
                         )}
                     </button>
                 </div>
+                
                 <p className="text-xs text-gray-500 mt-2">
                     TravelPilot is in beta and can make mistakes. Please check important info.
                 </p>
             </div>
-
         </div>
     );
 };
 
 export default ChatSider;
-
-

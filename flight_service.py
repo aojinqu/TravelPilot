@@ -1,4 +1,5 @@
 from amadeus import Client, ResponseError
+from models import Flight
 
 class SimpleFlightService:
     def __init__(self):
@@ -95,4 +96,18 @@ class SimpleFlightService:
         
         return outbound_flights, inbound_flights
 
-
+    def extract_flight(self, segment, duration, origin, destination):
+        """从 segment 信息提取航班数据并返回 Flight 对象"""
+        dep_time = segment['departure']['at']
+        arr_time = segment['arrival']['at']
+        return Flight(
+            origin=origin,
+            destination=destination,
+            departure_time=dep_time.split('T')[1][:5],
+            departure_date=dep_time.split('T')[0],
+            arrival_time=arr_time.split('T')[1][:5],
+            arrival_date=arr_time.split('T')[0],
+            duration=duration.replace('PT', '').lower(),
+            airline=segment['carrierCode'],
+            nonstop=True
+        )
