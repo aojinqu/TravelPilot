@@ -24,6 +24,7 @@ const initialState = {
         numPeople: null,      // 旅游人数
         budget: null,         // 总预算
         vibes: [],            // 旅行偏好
+        media_contents: [],    // 发现内容
     },
 };
 
