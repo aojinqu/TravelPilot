@@ -17,6 +17,19 @@ from pydantic import BaseModel
 from typing import List, Optional
 from flight_service import SimpleFlightService
 from datetime import datetime
+from google_maps_utils import get_place_photo_url
+from models import (
+    TravelInfo,
+    ChatRequest,
+    TripOverview,
+    DailyItinerary,
+    DailyItineraryResponse,
+    Flight,
+    Hotel,
+    PriceSummary,
+    ItineraryResponse,
+    TravelPlanRequest
+)
 
 from dotenv import load_dotenv
 
@@ -470,7 +483,7 @@ async def handle_chat(request: ChatRequest):
             grand_total=int(travel_info.budget-itinerary_data["budget_breakdown"]["remaining_budget_hkd"]) ,  # 332 + 221
             currency="HKD"
         )
-    
+
     if request_id:
         await asyncio.sleep(1)
         await progress_manager.add_progress(request_id, "Creating an itinerary", "info")

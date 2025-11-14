@@ -5,7 +5,7 @@ import { useTravel } from '../context/TravelContext';
 const MainContent = () => {
     const { tripOverview, daily_itinerary, flights, hotels, priceSummary, itinerary } = useTravel();
     const [showFullItinerary, setShowFullItinerary] = useState(false);
-    
+
     // 下载日历功能
     const handleDownloadCalendar = async () => {
         if (!itinerary) return;
@@ -57,7 +57,7 @@ const MainContent = () => {
             <main className="flex-1 overflow-y-auto p-6 bg-gray-900">
                 {/* 顶部返回按钮 */}
                 <div className="flex justify-between items-center mb-6">
-                    <button 
+                    <button
                         onClick={handleBackToMain}
                         className="flex items-center px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors duration-200"
                     >
@@ -66,7 +66,7 @@ const MainContent = () => {
                         </svg>
                         Back to Overview
                     </button>
-                    <button 
+                    <button
                         onClick={handleDownloadCalendar}
                         disabled={!itinerary}
                         className="flex items-center px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -155,7 +155,7 @@ const MainContent = () => {
                     <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.102 1.101m-4.242 0a2 2 0 010 2.828l.707.707"></path></svg>
                     Download Calendar
                 </button>
-                <button 
+                <button
                     onClick={handleViewFullPlan}
                     className="flex items-center px-4 py-2 bg-[#8965F2] text-white rounded-lg hover:bg-purple-700 transition-colors duration-200"
                 >
@@ -184,7 +184,7 @@ const MainContent = () => {
                             <span>{tripOverview.location || 'No Image'}</span>
                         </div>
                     </div>
-                    
+
                     <h3 className="text-lg font-semibold text-gray-200 mb-1">
                         {tripOverview.title}
                     </h3>
@@ -194,7 +194,7 @@ const MainContent = () => {
                     </p>
 
                     {/* View Full Plan 按钮 */}
-                    <button 
+                    <button
                         onClick={handleViewFullPlan}
                         className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 px-4 rounded-lg font-medium transition-colors duration-200 flex items-center justify-center"
                     >

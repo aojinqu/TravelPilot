@@ -1,91 +1,17 @@
 // components/Header.jsx
 
-import React, { useState, useRef, useEffect } from 'react';
 import { useTravel } from '../context/TravelContext';
 import { useAuth } from '../context/AuthContext';
-
-// 导入我们刚创建的三个新组件
-import DateRangePicker from './DateRangePicker';
-import PassengerSelector from './PassengerSelector';
-import LocationSearch from './LocationSearch';
-
-// ... DropdownButton 辅助组件的代码 ...
-// (保持你之前的 DropdownButton 辅助组件代码不变)
-const DropdownButton = ({ triggerContent, triggerIcon, children }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const dropdownRef = useRef(null);
-
-    useEffect(() => {
-        if (!isOpen) return;
-        const handleClickOutside = (event) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-                setIsOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, [isOpen]);
-
-    return (
-        <div className="relative" ref={dropdownRef}>
-            <button
-                onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center px-3 py-1 bg-gray-700 rounded-md hover:bg-gray-600 transition-colors duration-200"
-            >
-                {triggerIcon}
-                {triggerContent}
-                <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
-            </button>
-            {isOpen && (
-                <div className="absolute top-full mt-2 w-auto bg-gray-800 rounded-lg shadow-xl z-20 border border-gray-700">
-                    {children}
-                </div>
-            )}
-        </div>
-    );
-};
-
 
 const Header = () => {
     const { tripOverview, priceSummary, travelInfo, flights, hotels, daily_itinerary} = useTravel();
     const { user, isAuthenticated } = useAuth();
 
     // ... 你的默认值和数据提取逻辑 (保持不变) ...
-    const title = tripOverview?.title || "Winter Feasts in Osaka's Food Paradise";
-    const location = travelInfo?.destination || "Osaka";
-    const dateRange = travelInfo?.dateRange || "Feb 6 - Feb 12";
+    const title = tripOverview?.title || "TravelPilot";
     const totalPrice = priceSummary
         ? `${priceSummary.currency} ${priceSummary.grand_total}`
-        : "HKD 404";
-    const numPeople = travelInfo?.numPeople || "1";
-
-    // ... 你的图标变量 (保持不变) ...
-    const dateIcon = <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>;
-    const peopleIcon = <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>;
-    const locationIcon = (
-        <svg
-            className="w-4 h-4 mr-1 flex-shrink-0"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-        >
-            <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z"
-            ></path>
-            <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-            ></path>
-        </svg>
-    );
+        : "HKD  0";
 
 
     return (

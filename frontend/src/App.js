@@ -8,6 +8,7 @@ import ItineraryDetail from './components/ItineraryDetail';
 import Header from './components/Header';
 import HistoryPanel from './components/HistoryPanel';
 
+
 function App() {
     const [currentView, setCurrentView] = useState('overview'); // 'overview' 或 'itinerary'
     const [tripData, setTripData] = useState(null);
