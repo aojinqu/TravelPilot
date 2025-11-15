@@ -67,7 +67,7 @@ const DateRangePicker = () => {
                 dateRange: `${formatDate(start)} - ${formatDate(end)}`,
                 numDays: numDays
             });
-            console.log(`日期范围已更新: ${startDate.toDateString()} - ${endDate.toDateString()} (${numDays}天)`);
+            console.log(`Date range updated: ${startDate.toDateString()} - ${endDate.toDateString()} (${numDays} days)`);
         }
     };
 
@@ -98,7 +98,7 @@ const DateRangePicker = () => {
             // 检查是否超过3天限制
             const daysDifference = getDaysDifference(startDate, clickedDate);
             if (daysDifference > 3) {
-                setErrorMessage('行程天数不能超过3天');
+                setErrorMessage('Trip duration cannot exceed 3 days');
                 return;
             }
             if (clickedDate >= startDate) {
@@ -186,7 +186,7 @@ const DateRangePicker = () => {
                         itinerary: {travelInfo.numDays} days
                     </div>
                 ) : (
-                    <div className="text-xs text-gray-400">请选择日期范围</div>
+                    <div className="text-xs text-gray-400">Please select a date range</div>
                 )}
                 {errorMessage && (
                     <div className="text-xs text-red-400 flex items-center">

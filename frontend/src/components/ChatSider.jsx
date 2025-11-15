@@ -190,7 +190,7 @@ const ChatSider = () => {
         // 信息完整，通知用户并调用 API 生成行程
         addChatMessage({
             type: 'system',
-            content: '✅ 旅行信息已收集完整！正在为您生成详细的旅行行程，请稍候...',
+            content: '✅ Travel information is complete! Generating your detailed travel itinerary, please wait...',
             timestamp: new Date().toISOString()
         });
 
@@ -210,7 +210,7 @@ const ChatSider = () => {
 
         try {
             // 构建发送给后端的消息，包含所有旅行信息
-            const enrichedMessage = `目的地：${updatedTravelInfo.destination}，出发地：${updatedTravelInfo.departure}，${updatedTravelInfo.numDays}天，${updatedTravelInfo.numPeople}人，预算${updatedTravelInfo.budget}元。${messageToSend}`;
+            const enrichedMessage = `Destination: ${updatedTravelInfo.destination}, Departure: ${updatedTravelInfo.departure}, ${updatedTravelInfo.numDays} days, ${updatedTravelInfo.numPeople} people, budget ${updatedTravelInfo.budget} ${updatedTravelInfo.currency || 'CNY'}. ${messageToSend}`;
 
             const response = await fetch('http://localhost:8000/api/chat', {
                 method: 'POST',
@@ -261,7 +261,7 @@ const ChatSider = () => {
             console.error("Failed to fetch itinerary:", error);
             addChatMessage({
                 type: 'system',
-                content: `抱歉，请求失败: ${error.message}`,
+                content: `Sorry, request failed: ${error.message}`,
                 timestamp: new Date().toISOString()
             });
         } finally {
@@ -328,17 +328,17 @@ const ChatSider = () => {
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {chatMessages.length === 0 && progressMessages.length === 0 ? (
                     <div className="text-center text-gray-400 mt-8 px-4">
-                        <p className="text-sm font-semibold mb-4">开始您的旅行规划</p>
+                        <p className="text-sm font-semibold mb-4">Start your travel plan</p>
                         <div className="text-xs text-gray-500 space-y-2 text-left bg-gray-800/50 rounded-lg p-4">
-                            <p className="font-semibold text-gray-400 mb-2">请告诉我以下信息：</p>
+                            <p className="font-semibold text-gray-400 mb-2">Please tell me：</p>
                             <ul className="space-y-1 list-disc list-inside">
-                                <li>出发地点（例如：从香港出发）</li>
-                                <li>目的地（例如：去大阪）</li>
-                                <li>旅游天数（例如：7天）</li>
-                                <li>旅游人数（例如：2人）</li>
-                                <li>总预算（例如：5000元）</li>
+                                <li>Departure location (e.g., from Hong Kong)</li>
+                                <li>Destination (e.g., to Osaka)</li>
+                                <li>Number of days (e.g., 7 days)</li>
+                                <li>Number of people (e.g., 2 people)</li>
+                                <li>Total budget (e.g., 5000 CNY)</li>
                             </ul>
-                            <p className="mt-3 text-gray-400 italic">您可以一次性提供所有信息，也可以分多次提供。</p>
+                            <p className="mt-3 text-gray-400 italic">You can provide all information at once or in multiple messages.</p>
                         </div>
                     </div>
                 ) : (
@@ -367,7 +367,7 @@ const ChatSider = () => {
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
                                                       d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                             </svg>
-                                            <span className="text-xs font-semibold text-yellow-300">提示</span>
+                                            <span className="text-xs font-semibold text-yellow-300">Tip</span>
                                         </div>
                                     )}
 
@@ -476,31 +476,31 @@ const ChatSider = () => {
             {/* 旅行信息显示区域 */}
             {(travelInfo.departure || travelInfo.destination || travelInfo.numDays || travelInfo.numPeople || travelInfo.budget || (travelInfo.vibes && travelInfo.vibes.length > 0)) && (
                 <div className="px-4 py-2 bg-gray-800/50 border-t border-gray-700">
-                    <div className="text-xs text-gray-400 mb-2">已收集的信息：</div>
+                    <div className="text-xs text-gray-400 mb-2">Collected Information:</div>
                     <div className="flex flex-wrap gap-2">
                         {travelInfo.departure && (
                             <span className="px-2 py-1 bg-green-900/50 text-green-300 rounded text-xs">
-                            出发：{travelInfo.departure}
+                            Departure: {travelInfo.departure}
                         </span>
                         )}
                         {travelInfo.destination && (
                             <span className="px-2 py-1 bg-blue-900/50 text-blue-300 rounded text-xs">
-                            目的地：{travelInfo.destination}
+                            Destination: {travelInfo.destination}
                         </span>
                         )}
                         {travelInfo.numDays && (
                             <span className="px-2 py-1 bg-purple-900/50 text-purple-300 rounded text-xs">
-                            {travelInfo.numDays}天
+                            {travelInfo.numDays} days
                         </span>
                         )}
                         {travelInfo.numPeople !== 0 && travelInfo.numPeople !== null && (
                             <span className="px-2 py-1 bg-orange-900/50 text-orange-300 rounded text-xs">
-                            {travelInfo.numPeople}人
+                            {travelInfo.numPeople} people
                         </span>
                         )}
                         {travelInfo.budget && (
                             <span className="px-2 py-1 bg-yellow-900/50 text-yellow-300 rounded text-xs">
-                            预算：{travelInfo.budget}元
+                            Budget: {travelInfo.budget} {travelInfo.currency || 'CNY'}
                         </span>
                         )}
                         {/* Vibe 标签 */}

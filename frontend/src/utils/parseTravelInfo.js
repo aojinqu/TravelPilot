@@ -152,19 +152,19 @@ export const validateTravelInfo = (travelInfo) => {
     const missingFields = [];
     
     if (!travelInfo.departure) {
-        missingFields.push('出发地点');
+        missingFields.push('Departure location');
     }
     if (!travelInfo.destination) {
-        missingFields.push('目的地');
+        missingFields.push('Destination');
     }
     if (!travelInfo.numDays) {
-        missingFields.push('旅游天数');
+        missingFields.push('Number of days');
     }
     if (!travelInfo.numPeople) {
-        missingFields.push('旅游人数');
+        missingFields.push('Number of people');
     }
     if (!travelInfo.budget) {
-        missingFields.push('总预算');
+        missingFields.push('Total budget');
     }
     
     return {
@@ -184,18 +184,18 @@ export const generateMissingInfoMessage = (missingFields) => {
     }
     
     const fieldExamples = {
-        '出发地点': '例如：从香港出发、从北京出发',
-        '目的地': '例如：去大阪、到东京、目的地：首尔',
-        '旅游天数': '例如：7天、5日游、玩3天',
-        '旅游人数': '例如：2人、3个人、4位',
-        '总预算': '例如：5000元、1万元、预算8000',
+        'Departure location': 'e.g., from Hong Kong, from Beijing',
+        'Destination': 'e.g., to Osaka, to Tokyo, destination: Seoul',
+        'Number of days': 'e.g., 7 days, 5-day trip, 3 days',
+        'Number of people': 'e.g., 2 people, 3 people, 4 people',
+        'Total budget': 'e.g., 5000 CNY, 10000 CNY, budget 8000',
     };
     
-    let message = '📋 为了为您生成详细的旅行行程，还需要补充以下信息：\n\n';
+    let message = '📋 To generate your detailed travel itinerary, please provide the following information:\n\n';
     missingFields.forEach((field, index) => {
         message += `${index + 1}. ${field} ${fieldExamples[field] || ''}\n`;
     });
-    message += '\n💡 提示：您可以一次性提供所有信息，也可以分多次提供。';
+    message += '\n💡 Tip: You can provide all information at once or in multiple messages.';
     
     return message;
 };

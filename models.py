@@ -86,3 +86,27 @@ class TravelPlanRequest(BaseModel):
     # preferences: str
     budget: float
     # start_date: Optional[str] = None
+
+class SocialMediaRequest(BaseModel):
+    destination: str
+    tags: Optional[List[str]] = []
+    limit: Optional[int] = 12
+
+class SocialMediaPost(BaseModel):
+    id: str
+    title: str
+    description: str
+    creator: str
+    likes: str
+    duration: str
+    thumbnail: str
+    video_url: str
+    tags: List[str]
+    platform: str  # "tiktok", "youtube", "instagram"
+
+
+
+class SocialMediaResponse(BaseModel):
+    posts: List[SocialMediaPost]
+    destination: str
+    total_count: int

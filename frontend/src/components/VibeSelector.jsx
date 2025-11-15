@@ -39,6 +39,7 @@ const VibeSelector = () => {
         }
         const newVibes = [...selectedVibes, vibe];
         updateTravelInfo({ vibes: newVibes });
+        console.log(newVibes, travelInfo.vibes);
         setSearchTerm('');
         setIsOpen(false);
     };
