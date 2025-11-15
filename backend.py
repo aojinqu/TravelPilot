@@ -31,8 +31,10 @@ from models import (
     Hotel,
     PriceSummary,
     ItineraryResponse,
-    TravelPlanRequest, SocialMediaPost, SocialMediaResponse, SocialMediaRequest
+    TravelPlanRequest, SocialMediaPost, SocialMediaResponse, SocialMediaRequest,
+    XiaohongshuRequest, XiaohongshuResponse
 )
+from xhs import generate_xhs
 from social_service import YouTubeService, GoogleSearchService
 
 
@@ -265,6 +267,22 @@ def extract_tags(text: str, destination: str):
             tags.append(category)
 
     return list(set(tags))[:5]  # 去重并限制数量
+
+
+@app.post("/api/xiaohongshu", response_model=XiaohongshuResponse)
+async def get_xiaohongshu_content(request: XiaohongshuRequest):
+    """
+    获取小红书旅行推荐内容
+    """
+    try:
+        result = await generate_xhs(
+            destination=request.destination,
+            preferences=request.preferences
+        )
+        return result
+    except Exception as e:
+        print(f"获取小红书内容失败: {e}")
+        raise HTTPException(status_code=500, detail=f"获取小红书内容失败: {str(e)}")
 
 
 @app.post("/api/social-media-content", response_model=SocialMediaResponse)
@@ -825,6 +843,32 @@ async def handle_chat(request: ChatRequest):
         )
 
         real_hotels.append(hotel)
+
+    # 如果用户选择了preference，搜索小红书内容
+    xhs_data = None
+    if request.vibe and len(request.vibe) > 0:
+        if request_id:
+            await asyncio.sleep(1)
+            await progress_manager.add_progress(request_id, "Searching Rednote based on your preferences", "info")
+            await progress_manager.add_progress(request_id, "Searching top 5 relevant rednote posts", "info")
+        
+        try:
+            xhs_result = await generate_xhs(
+                destination=travel_info.destination,
+                preferences=request.vibe
+            )
+            if xhs_result and xhs_result.get("success"):
+                xhs_data = xhs_result.get("data")
+                if request_id:
+                    await progress_manager.add_progress(request_id,
+                                                        f"Found {len(xhs_data.get('summary', {}).get('top_places', []))} places, {len(xhs_data.get('summary', {}).get('top_restaurants', []))} restaurants, and {len(xhs_data.get('summary', {}).get('top_activities', []))} activities based on your preferences.",
+                                                        "detail")
+        except Exception as e:
+            print(f"Error fetching Rednote content: {str(e)}")
+            if request_id:
+                await progress_manager.add_progress(request_id,
+                                                    "Unable to fetch Rednote recommendations, but continuing with itinerary generation.",
+                                                    "detail")
 
     real_price = PriceSummary(
         flights_total=int(float(best_outbound['price']['total']) + float(best_inbound['price']['total'])) * 9,

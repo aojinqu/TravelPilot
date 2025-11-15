@@ -1,12 +1,35 @@
 // components/MainContent.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTravel } from '../context/TravelContext';
 import AddInspiration from './AddInspiration';
+import XiaohongshuContent from './XiaohongshuContent';
 
 const MainContent = () => {
-    const { tripOverview, daily_itinerary, flights, hotels, priceSummary, itinerary } = useTravel();
+    const { tripOverview, daily_itinerary, flights, hotels, priceSummary, itinerary, travelInfo } = useTravel();
     const [showFullItinerary, setShowFullItinerary] = useState(false);
     const [showInspiration, setShowInspiration] = useState(false);
+    const [showXiaohongshu, setShowXiaohongshu] = useState(false);
+    const [hasAutoShownXhs, setHasAutoShownXhs] = useState(false); // 跟踪是否已经自动显示过
+    const lastTripTitleRef = useRef(null); // 跟踪上一次的行程标题
+
+    // 当生成新的行程时，重置自动显示标志
+    useEffect(() => {
+        const currentTitle = tripOverview?.title;
+        // 如果标题变化了（新行程），重置标志
+        if (currentTitle && currentTitle !== lastTripTitleRef.current) {
+            setHasAutoShownXhs(false);
+            lastTripTitleRef.current = currentTitle;
+        }
+    }, [tripOverview?.title]);
+
+    // 当生成行程后，如果用户选择了preference，自动显示小红书内容
+    useEffect(() => {
+        // 检查是否有行程数据且用户选择了preference，且还没有自动显示过
+        if (tripOverview && travelInfo.vibes && travelInfo.vibes.length > 0 && !hasAutoShownXhs) {
+            setShowXiaohongshu(true);
+            setHasAutoShownXhs(true);
+        }
+    }, [tripOverview, travelInfo.vibes, hasAutoShownXhs]);
 
     const handleDownloadCalendar = async () => {
         // 检查是否有可用的行程数据
@@ -79,11 +102,22 @@ const MainContent = () => {
     const handleViewInspiration = () => {
         setShowInspiration(true);
         setShowFullItinerary(false);
+        setShowXiaohongshu(false);
     };
 
     // 关闭灵感页面
     const handleCloseInspiration = () => {
         setShowInspiration(false);
+    };
+
+    // 切换显示小红书内容（在主内容区域）
+    const handleToggleXiaohongshu = () => {
+        const newState = !showXiaohongshu;
+        setShowXiaohongshu(newState);
+        // 如果用户手动关闭，标记为已处理，避免自动重新打开
+        if (!newState) {
+            setHasAutoShownXhs(true);
+        }
     };
 
     // 如果显示完整行程页面（全屏）
@@ -193,10 +227,23 @@ const MainContent = () => {
                 </div>
             )}
 
-            {/* 主内容区域 - 根据是否显示灵感页面调整透明度 */}
+            {/* 主内容区域 - 根据是否显示侧边页面调整透明度 */}
             <div className={`transition-all duration-300 ${showInspiration ? 'opacity-30 pointer-events-none' : 'opacity-100'}`}>
                 {/* 顶部按钮 */}
                 <div className="flex justify-end space-x-3 mb-6">
+                    <button
+                        onClick={handleToggleXiaohongshu}
+                        className={`flex items-center px-4 py-2 rounded-lg transition-colors duration-200 ${
+                            showXiaohongshu 
+                                ? 'bg-red-600 text-white' 
+                                : 'bg-gray-800 text-red-400 hover:bg-gray-700'
+                        }`}
+                    >
+                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                        </svg>
+                        preferences in rednote
+                    </button>
                     <button
                         onClick={handleViewInspiration}
                         className="flex items-center px-4 py-2 bg-gray-800 text-purple-400 rounded-lg hover:bg-gray-700 transition-colors duration-200"
@@ -213,13 +260,6 @@ const MainContent = () => {
                     >
                         <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.102 1.101m-4.242 0a2 2 0 010 2.828l.707.707"></path></svg>
                         Download Calendar
-                    </button>
-                    <button
-                        onClick={handleViewFullPlan}
-                        className="flex items-center px-4 py-2 bg-[#8965F2] text-white rounded-lg hover:bg-purple-700 transition-colors duration-200"
-                    >
-                        Full Itinerary
-                        <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
                     </button>
                 </div>
 
@@ -373,6 +413,11 @@ const MainContent = () => {
                             })}
                         </div>
                     </div>
+                )}
+
+                {/* 小红书推荐卡片 */}
+                {showXiaohongshu && (
+                    <XiaohongshuContent onBack={handleToggleXiaohongshu} />
                 )}
             </div>
         </main>
