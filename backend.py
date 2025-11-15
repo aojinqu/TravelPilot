@@ -379,6 +379,9 @@ async def handle_chat(request: ChatRequest):
                 start_time=activity["start_time"],
                 end_time=activity["end_time"],
                 activity=activity["activity_name"],
+                activity_description=activity["description"],
+                activity_cost=str(activity["cost_hkd"]),
+                activity_transport=f'{activity["travel_info"]["from_previous_duration_minutes"]} minutes from_previous attraction by {activity["travel_info"]["transportation_mode"]}',
                 image_url=url
             )
             daily_data.append({
@@ -411,6 +414,7 @@ async def handle_chat(request: ChatRequest):
         seg_in = best_inbound['itineraries'][0]['segments'][0]
         dur_out = best_outbound['itineraries'][0]['duration']
         dur_in = best_inbound['itineraries'][0]['duration']
+        flight_total_price = (float(best_outbound['price']['total']) + float(best_inbound['price']['total']))*9 #EUR->HKD
 
         real_flights = [
             flight_service.extract_flight(seg_out, dur_out, travel_info.departure, travel_info.destination),
@@ -450,9 +454,9 @@ async def handle_chat(request: ChatRequest):
         real_hotels.append(hotel)
 
     real_price = PriceSummary(
-            flights_total=int(float(best_outbound['price']['total']) + float(best_inbound['price']['total']))*9,
+            flights_total=int(flight_total_price),
             hotels_total=int(itinerary_data["budget_breakdown"]["accommodation_total_hkd"]),
-            grand_total=int(travel_info.budget-itinerary_data["budget_breakdown"]["remaining_budget_hkd"]) ,  # 332 + 221
+            grand_total=int(travel_info.budget-itinerary_data["budget_breakdown"]["remaining_budget_hkd"]+flight_total_price) ,  
             currency="HKD"
         )
     

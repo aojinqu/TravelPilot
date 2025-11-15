@@ -34,13 +34,13 @@ const PassengerSelector = () => {
 
     // 直接从全局状态获取乘客信息，避免本地状态重置
     const passengerDetails = travelInfo.passengerDetails || {
-        adults: 1,
+        adults: 0,
         children: 0,
         infants: 0,
-        total: 1
+        total: 0
     };
 
-    const { adults = 1, children = 0, infants = 0, total = 1 } = passengerDetails;
+    const { adults = 0, children = 0, infants = 0, total = 0 } = passengerDetails;
 
     // 更新全局状态的方法
     const updatePassengerCount = (newAdults, newChildren, newInfants) => {
@@ -82,7 +82,7 @@ const PassengerSelector = () => {
                     title="Adults"
                     description="Ages 13 or above"
                     count={adults}
-                    onDecrement={() => handleAdultsChange(Math.max(1, adults - 1))}
+                    onDecrement={() => handleAdultsChange(Math.max(0, adults - 1))}
                     onIncrement={() => handleAdultsChange(adults + 1)}
                 />
                 <CounterRow
