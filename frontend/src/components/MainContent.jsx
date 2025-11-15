@@ -9,17 +9,38 @@ const MainContent = () => {
     const [showInspiration, setShowInspiration] = useState(false);
 
     const handleDownloadCalendar = async () => {
-        if (!itinerary) return;
+        // 检查是否有可用的行程数据
+        if (!daily_itinerary || daily_itinerary.length === 0) {
+            alert('没有可用的行程数据，请先生成行程');
+            return;
+        }
 
         try {
+            // 解析开始日期
+            let startDate = new Date().toISOString();
+            if (tripOverview?.date_range) {
+                const dateStr = tripOverview.date_range.split(' - ')[0];
+                try {
+                    // 尝试解析日期格式，例如 "Mon Feb 05 2024"
+                    const parsedDate = new Date(dateStr);
+                    if (!isNaN(parsedDate.getTime())) {
+                        startDate = parsedDate.toISOString();
+                    }
+                } catch (e) {
+                    console.warn('无法解析日期，使用当前日期');
+                }
+            }
+
+            // 发送结构化的 daily_itinerary 数据
             const response = await fetch('http://localhost:8000/api/download-calendar', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    itinerary: itinerary,
-                    start_date: tripOverview?.date_range?.split(' - ')[0] || new Date().toISOString(),
+                    daily_itinerary: daily_itinerary,
+                    trip_overview: tripOverview,
+                    start_date: startDate,
                 }),
             });
 
@@ -38,7 +59,7 @@ const MainContent = () => {
             document.body.removeChild(a);
         } catch (error) {
             console.error('Failed to download calendar:', error);
-            alert('Failed to download calendar, please try again later');
+            alert('下载日历失败，请稍后重试');
         }
     };
 
@@ -82,7 +103,7 @@ const MainContent = () => {
                     </button>
                     <button
                         onClick={handleDownloadCalendar}
-                        disabled={!itinerary}
+                        disabled={!daily_itinerary || daily_itinerary.length === 0}
                         className="flex items-center px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -187,7 +208,7 @@ const MainContent = () => {
                     </button>
                     <button
                         onClick={handleDownloadCalendar}
-                        disabled={!itinerary}
+                        disabled={!daily_itinerary || daily_itinerary.length === 0}
                         className="flex items-center px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.102 1.101m-4.242 0a2 2 0 010 2.828l.707.707"></path></svg>

@@ -67,6 +67,100 @@ app.add_middleware(
 app.include_router(auth_router)
 
 
+def generate_ics_from_daily_itinerary(daily_itinerary: list, trip_overview: dict = None, start_date: datetime = None) -> bytes:
+    """
+    从结构化的 daily_itinerary 数据生成 ICS 日历文件
+    为每个活动创建带具体时间的日历事件
+
+    Args:
+        daily_itinerary: 每日行程列表，格式为 [{"day": int, "itinerary": {"start_time": str, "end_time": str, "activity": str}}]
+        trip_overview: 行程总览信息（可选）
+        start_date: 开始日期（默认为今天）
+
+    Returns:
+        bytes: The ICS file content as bytes
+    """
+    cal = Calendar()
+    cal.add('prodid', '-//AI Travel Planner//github.com//')
+    cal.add('version', '2.0')
+
+    if start_date is None:
+        start_date = datetime.today()
+    else:
+        # 确保 start_date 是 datetime 对象
+        if isinstance(start_date, str):
+            try:
+                # 尝试解析 ISO 格式的日期字符串
+                if 'Z' in start_date:
+                    start_date = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+                else:
+                    start_date = datetime.fromisoformat(start_date)
+            except:
+                # 如果解析失败，使用今天
+                start_date = datetime.today()
+        # 将时间设置为当天的开始（00:00:00）
+        if isinstance(start_date, datetime):
+            start_date = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    # 按天分组活动
+    activities_by_day = {}
+    for item in daily_itinerary:
+        day = item.get("day", 1)
+        itinerary = item.get("itinerary", {})
+        
+        if day not in activities_by_day:
+            activities_by_day[day] = []
+        activities_by_day[day].append(itinerary)
+
+    # 为每个活动创建事件
+    for day_num in sorted(activities_by_day.keys()):
+        current_date = start_date + timedelta(days=day_num - 1)
+        activities = activities_by_day[day_num]
+
+        for activity in activities:
+            activity_name = activity.get("activity", "Activity")
+            start_time_str = activity.get("start_time", "09:00")
+            end_time_str = activity.get("end_time", "17:00")
+
+            # 解析时间字符串 (格式: "HH:MM")
+            try:
+                start_hour, start_minute = map(int, start_time_str.split(":"))
+                end_hour, end_minute = map(int, end_time_str.split(":"))
+            except:
+                # 如果解析失败，使用默认时间
+                start_hour, start_minute = 9, 0
+                end_hour, end_minute = 17, 0
+
+            # 创建事件的开始和结束时间
+            event_start = current_date.replace(hour=start_hour, minute=start_minute)
+            event_end = current_date.replace(hour=end_hour, minute=end_minute)
+
+            # 如果结束时间早于开始时间，假设是第二天
+            if event_end < event_start:
+                event_end = event_end + timedelta(days=1)
+
+            # 创建事件
+            event = Event()
+            event.add('summary', activity_name)
+            
+            # 构建描述
+            description_parts = []
+            if trip_overview:
+                description_parts.append(f"Trip: {trip_overview.get('title', 'Travel Itinerary')}")
+            description_parts.append(f"Day {day_num}")
+            description_parts.append(f"Time: {start_time_str} - {end_time_str}")
+            
+            event.add('description', '\n'.join(description_parts))
+            event.add('dtstart', event_start)
+            event.add('dtend', event_end)
+            event.add('dtstamp', datetime.now())
+            event.add('location', activity.get("address", ""))
+            
+            cal.add_component(event)
+
+    return cal.to_ical()
+
+
 def generate_ics_content(plan_text: str, start_date: datetime = None) -> bytes:
     """
     Generate an ICS calendar file from a travel itinerary text.
@@ -391,11 +485,11 @@ async def run_mcp_travel_planner(destination: str, num_days: int, num_people: in
         mcp_tools = MultiMCPTools(
             [
                 # Windows
-                # "cmd /c npx -y @openbnb/mcp-server-airbnb --ignore-robots-txt",
-                # "cmd /c npx -y @gongrzhe/server-travelplanner-mcp",
+                " cmd /c npx -y @openbnb/mcp-server-airbnb --ignore-robots-txt",
+                "cmd /c npx -y @gongrzhe/server-travelplanner-mcp",
                 # Linux
-                "npx -y @openbnb/mcp-server-airbnb --ignore-robots-txt",
-                "npx @gongrzhe/server-travelplanner-mcp",
+                # "npx -y @openbnb/mcp-server-airbnb --ignore-robots-txt",
+                # "npx @gongrzhe/server-travelplanner-mcp",
             ],
             env={
                 "GOOGLE_MAPS_API_KEY": google_maps_key,
@@ -520,25 +614,51 @@ async def get_airbnb_images(room_url: str):
 async def download_calendar(request: dict):
     """
     生成并返回 ICS 日历文件
+    支持结构化的 daily_itinerary 数据
     """
     try:
-        itinerary_text = request.get("itinerary")
+        daily_itinerary = request.get("daily_itinerary")
+        trip_overview = request.get("trip_overview")
         start_date_str = request.get("start_date")
-
-        if not itinerary_text:
-            raise HTTPException(status_code=400, detail="缺少行程内容")
-
-        # 解析开始日期
-        start_date = None
-        if start_date_str:
-            try:
-                start_date = datetime.fromisoformat(start_date_str.replace('Z', '+00:00'))
-            except:
+        
+        # 兼容旧格式：如果收到文本格式的 itinerary，使用旧方法
+        itinerary_text = request.get("itinerary")
+        
+        if daily_itinerary:
+            # 使用新的结构化数据格式
+            if not daily_itinerary or len(daily_itinerary) == 0:
+                raise HTTPException(status_code=400, detail="缺少行程内容")
+            
+            # 解析开始日期
+            start_date = None
+            if start_date_str:
+                try:
+                    start_date = datetime.fromisoformat(start_date_str.replace('Z', '+00:00'))
+                except:
+                    start_date = datetime.today()
+            else:
                 start_date = datetime.today()
+            
+            ics_content = generate_ics_from_daily_itinerary(
+                daily_itinerary, 
+                trip_overview, 
+                start_date
+            )
+        elif itinerary_text:
+            # 使用旧的文本格式（向后兼容）
+            # 解析开始日期
+            start_date = None
+            if start_date_str:
+                try:
+                    start_date = datetime.fromisoformat(start_date_str.replace('Z', '+00:00'))
+                except:
+                    start_date = datetime.today()
+            else:
+                start_date = datetime.today()
+            
+            ics_content = generate_ics_content(itinerary_text, start_date)
         else:
-            start_date = datetime.today()
-
-        ics_content = generate_ics_content(itinerary_text, start_date)
+            raise HTTPException(status_code=400, detail="缺少行程内容")
 
         from fastapi.responses import Response
         return Response(

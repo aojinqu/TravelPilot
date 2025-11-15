@@ -1,30 +1,29 @@
 /**
- * 从用户输入中解析旅行信息
- * @param {string} text - 用户输入文本
- * @param {object} existingInfo - 已存在的旅行信息
- * @returns {object} 解析出的旅行信息
+ * Parse travel information from user input (English)
+ * @param {string} text - User input text
+ * @param {object} existingInfo - Existing travel information
+ * @returns {object} Parsed travel information
  */
 export const parseTravelInfo = (text, existingInfo = {}) => {
     const info = { ...existingInfo };
     const lowerText = text.toLowerCase();
 
-    // 解析出发地点 (从/从...出发/起点)
+    // Parse departure location
     if (!info.departure) {
         const departurePatterns = [
-            /从\s*([^，,。.出发\s]{1,20}?)\s*出发/,
-            /起点[：:]\s*([^，,。.\s]+)/,
-            /出发地[：:]\s*([^，,。.\s]+)/,
-            /departure[：:]\s*([^，,。.\s]+)/i,
-            /from\s+([^，,。.\s]+)/i,
-            /出发[：:]\s*([^，,。.\s]+)/,
+            /from\s+([a-zA-Z\s]{2,30}?)(?:\s|,|\.|$)/i,
+            /departure[:\s]+([a-zA-Z\s]{2,30}?)(?:\s|,|\.|$)/i,
+            /departing\s+from\s+([a-zA-Z\s]{2,30}?)(?:\s|,|\.|$)/i,
+            /leaving\s+from\s+([a-zA-Z\s]{2,30}?)(?:\s|,|\.|$)/i,
+            /origin[:\s]+([a-zA-Z\s]{2,30}?)(?:\s|,|\.|$)/i,
         ];
         
         for (const pattern of departurePatterns) {
             const match = text.match(pattern);
             if (match && match[1]) {
                 let departure = match[1].trim();
-                // 移除可能的标点符号
-                departure = departure.replace(/[，,。.！!？?]$/, '');
+                // Remove trailing punctuation
+                departure = departure.replace(/[,.\s]+$/, '');
                 if (departure.length > 0 && departure.length < 30) {
                     info.departure = departure;
                     break;
@@ -33,25 +32,23 @@ export const parseTravelInfo = (text, existingInfo = {}) => {
         }
     }
 
-    // 解析目的地 (去/到/目的地)
+    // Parse destination
     if (!info.destination) {
         const destinationPatterns = [
-            /去\s*([^，,。.旅游玩\s]{1,20}?)(?:\s|，|,|。|旅游|玩|$)/,
-            /到\s*([^，,。.\s]{1,20}?)(?:\s|，|,|。|$)/,
-            /目的地[：:]\s*([^，,。.\s]+)/,
-            /destination[：:]\s*([^，,。.\s]+)/i,
-            /to\s+([^，,。.\s]+)/i,
-            /在\s*([^，,。.旅游\s]{1,20}?)\s*旅游/,
-            /去\s*([^，,。.玩\s]{1,20}?)\s*玩/,
-            /旅游[：:]\s*([^，,。.\s]+)/,
+            /to\s+([a-zA-Z\s]{2,30}?)(?:\s|,|\.|$)/i,
+            /destination[:\s]+([a-zA-Z\s]{2,30}?)(?:\s|,|\.|$)/i,
+            /going\s+to\s+([a-zA-Z\s]{2,30}?)(?:\s|,|\.|$)/i,
+            /traveling\s+to\s+([a-zA-Z\s]{2,30}?)(?:\s|,|\.|$)/i,
+            /visiting\s+([a-zA-Z\s]{2,30}?)(?:\s|,|\.|$)/i,
+            /trip\s+to\s+([a-zA-Z\s]{2,30}?)(?:\s|,|\.|$)/i,
         ];
         
         for (const pattern of destinationPatterns) {
             const match = text.match(pattern);
             if (match && match[1]) {
                 let destination = match[1].trim();
-                // 移除可能的标点符号
-                destination = destination.replace(/[，,。.！!？?]$/, '');
+                // Remove trailing punctuation
+                destination = destination.replace(/[,.\s]+$/, '');
                 if (destination.length > 0 && destination.length < 30) {
                     info.destination = destination;
                     break;
@@ -60,15 +57,16 @@ export const parseTravelInfo = (text, existingInfo = {}) => {
         }
     }
 
-    // 解析旅游天数 (X天/X日游/玩X天)
+    // Parse number of days
     if (!info.numDays) {
         const daysPatterns = [
-            /(\d+)\s*天/,
-            /(\d+)\s*日/,
-            /玩\s*(\d+)\s*天/,
             /(\d+)\s*days?/i,
-            /duration[：:]\s*(\d+)/i,
-            /天数[：:]\s*(\d+)/,
+            /(\d+)\s*day\s*trip/i,
+            /(\d+)\-day\s*trip/i,
+            /for\s+(\d+)\s*days?/i,
+            /duration[:\s]+(\d+)/i,
+            /trip\s+of\s+(\d+)\s*days?/i,
+            /(\d+)\s*days?\s*long/i,
         ];
         
         for (const pattern of daysPatterns) {
@@ -83,15 +81,16 @@ export const parseTravelInfo = (text, existingInfo = {}) => {
         }
     }
 
-    // 解析旅游人数 (X人/X个/X位)
+    // Parse number of people
     if (!info.numPeople) {
         const peoplePatterns = [
-            /(\d+)\s*人/,
-            /(\d+)\s*个/,
-            /(\d+)\s*位/,
             /(\d+)\s*people/i,
             /(\d+)\s*persons?/i,
-            /人数[：:]\s*(\d+)/,
+            /(\d+)\s*travelers?/i,
+            /(\d+)\s*guests?/i,
+            /for\s+(\d+)\s*(?:people|persons?|travelers?|guests?)/i,
+            /group\s+of\s+(\d+)/i,
+            /(\d+)\s*adults?/i,
         ];
         
         for (const pattern of peoplePatterns) {
@@ -106,34 +105,44 @@ export const parseTravelInfo = (text, existingInfo = {}) => {
         }
     }
 
-    // 解析总预算 (X元/X块/X美元/X港币/X HKD/X USD/X RMB/预算X)
+    // Parse total budget
     if (!info.budget) {
         const budgetPatterns = [
-            /(\d+(?:\.\d+)?)\s*万\s*(?:元|块|美元|港币|HKD|USD|RMB|CNY)?/,
-            /预算[：:]\s*(\d+(?:\.\d+)?)\s*(?:万)?\s*(?:元|块|美元|港币|HKD|USD|RMB|CNY)?/,
-            /(\d+(?:\.\d+)?)\s*元/,
-            /(\d+(?:\.\d+)?)\s*块/,
-            /(\d+(?:\.\d+)?)\s*美元/,
-            /(\d+(?:\.\d+)?)\s*港币/,
-            /(\d+(?:\.\d+)?)\s*HKD/i,
-            /(\d+(?:\.\d+)?)\s*USD/i,
-            /(\d+(?:\.\d+)?)\s*RMB/i,
-            /(\d+(?:\.\d+)?)\s*CNY/i,
-            /budget[：:]\s*(\d+(?:\.\d+)?)/i,
+            /\$\s*(\d+(?:,\d{3})*(?:\.\d+)?)/i,
+            /(\d+(?:,\d{3})*(?:\.\d+)?)\s*USD/i,
+            /(\d+(?:,\d{3})*(?:\.\d+)?)\s*CNY/i,
+            /(\d+(?:,\d{3})*(?:\.\d+)?)\s*RMB/i,
+            /(\d+(?:,\d{3})*(?:\.\d+)?)\s*HKD/i,
+            /(\d+(?:,\d{3})*(?:\.\d+)?)\s*JPY/i,
+            /(\d+(?:,\d{3})*(?:\.\d+)?)\s*SGD/i,
+            /budget[:\s]+(\d+(?:,\d{3})*(?:\.\d+)?)/i,
+            /(\d+(?:,\d{3})*(?:\.\d+)?)\s*(?:thousand|k)\s*(?:USD|CNY|RMB|HKD|JPY|SGD)?/i,
         ];
         
         for (const pattern of budgetPatterns) {
             const match = text.match(pattern);
             if (match && match[1]) {
-                let amount = parseFloat(match[1]);
+                // Remove commas and parse number
+                let amountStr = match[1].replace(/,/g, '');
+                let amount = parseFloat(amountStr);
                 
-                // 处理"万"单位
-                if (text.match(/\d+(?:\.\d+)?\s*万/) && match[0].includes('万')) {
-                    amount = amount * 10000;
+                // Handle "thousand" or "k" unit
+                if (text.match(/\d+(?:,\d{3})*(?:\.\d+)?\s*(?:thousand|k)/i)) {
+                    amount = amount * 1000;
                 }
                 
-                if (amount > 0 && amount < 10000000) { // 限制最大预算
+                // Detect currency type
+                let currency = 'CNY'; // Default currency
+                if (match[0].match(/USD/i)) currency = 'USD';
+                else if (match[0].match(/HKD/i)) currency = 'HKD';
+                else if (match[0].match(/JPY/i)) currency = 'JPY';
+                else if (match[0].match(/SGD/i)) currency = 'SGD';
+                else if (match[0].match(/\$/)) currency = 'USD';
+                else if (match[0].match(/CNY|RMB/i)) currency = 'CNY';
+                
+                if (amount > 0 && amount < 10000000) { // Limit maximum budget
                     info.budget = Math.floor(amount);
+                    info.currency = currency;
                     break;
                 }
             }
@@ -144,8 +153,8 @@ export const parseTravelInfo = (text, existingInfo = {}) => {
 };
 
 /**
- * 验证旅行信息是否完整
- * @param {object} travelInfo - 旅行信息对象
+ * Validate if travel information is complete
+ * @param {object} travelInfo - Travel information object
  * @returns {object} { isValid: boolean, missingFields: string[] }
  */
 export const validateTravelInfo = (travelInfo) => {
@@ -174,9 +183,9 @@ export const validateTravelInfo = (travelInfo) => {
 };
 
 /**
- * 生成提示消息，告诉用户缺少哪些信息
- * @param {string[]} missingFields - 缺少的字段列表
- * @returns {string} 提示消息
+ * Generate a message telling the user what information is missing
+ * @param {string[]} missingFields - List of missing fields
+ * @returns {string} Tip message
  */
 export const generateMissingInfoMessage = (missingFields) => {
     if (missingFields.length === 0) {
