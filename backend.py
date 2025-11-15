@@ -1,22 +1,27 @@
-import re
-import httpx
-import json
 import asyncio
-from textwrap import dedent
-from agno.agent import Agent
-from agno.tools.mcp import MultiMCPTools
-from agno.tools.googlesearch import GoogleSearchTools
-from agno.models.openai import OpenAIChat
-from icalendar import Calendar, Event
-from datetime import datetime, timedelta
+import json
 import os
+import re
+from datetime import datetime
+from datetime import timedelta
+from typing import Optional
+
+import certifi
+import httpx
+from agno.agent import Agent
+from agno.models.openai import OpenAIChat
+from agno.tools.googlesearch import GoogleSearchTools
+from agno.tools.mcp import MultiMCPTools
+from dotenv import load_dotenv
+from fastapi import Depends, Header
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
-from typing import List, Optional
+from icalendar import Calendar, Event
+
+from database.auth import router as auth_router
+from database.supabase_client import SupabaseClient
 from flight_service import SimpleFlightService
-from datetime import datetime
 from google_maps_utils import get_place_photo_url
 from models import (
     TravelInfo, 
