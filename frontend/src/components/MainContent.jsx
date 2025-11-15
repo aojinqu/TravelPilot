@@ -97,57 +97,85 @@ const MainContent = () => {
                     <h1 className="text-2xl font-bold mb-6 text-white">{tripOverview?.title || "Travel Itinerary"}</h1>
 
                     {/* 使用后端数据渲染每日行程 */}
+                    {/* 使用后端数据渲染每日行程 */}
                     <div className="space-y-8">
-                        {daily_itinerary && daily_itinerary.length > 0 ? (
-                            daily_itinerary.map((dayItem, index) => {
-                                const { day, itinerary } = dayItem;
-                                return (
-                                    <div key={index} className="border-l-2 border-purple-500 pl-6 relative">
-                                        {/* 日期标题 */}
-                                        <div className="mb-4">
-                                            <h3 className="text-lg font-bold text-white">
-                                                Day {day}
-                                            </h3>
-                                        </div>
+                    {daily_itinerary && daily_itinerary.length > 0 ? (
+                        daily_itinerary.map((dayItem, index) => {
+                        const { day, itinerary } = dayItem;
 
-                                        {/* 活动卡片 */}
-                                        <div className="relative">
-                                            {/* 时间线圆点 */}
-                                            <div className="absolute -left-9 top-2 w-4 h-4 rounded-full bg-purple-500 border-4 border-gray-800"></div>
+                        return (
+                            <div key={index} className="border-l-2 border-purple-500 pl-6 relative">
+                            {/* 日期标题 */}
+                            <div className="mb-4">
+                                <h3 className="text-lg font-bold text-white">
+                                Day {day}
+                                </h3>
+                            </div>
 
-                                            <div className="bg-gray-700 rounded-lg p-4 w-[90%] mx-auto">
-                                                <div className="flex justify-between items-start mb-2">
-                                                    <h4 className="text-white font-semibold text-base">
-                                                        {itinerary.activity}
-                                                    </h4>
-                                                    <div className="flex items-center text-gray-400 text-sm bg-gray-600 px-2 py-1 rounded w-fit ml-2">
-                                                        <span>🕒</span>
-                                                        <span className="ml-1">
-                                                            {itinerary.start_time} - {itinerary.end_time}
-                                                        </span>
-                                                    </div>
-                                                </div>
+                            {/* 活动卡片 */}
+                            <div className="relative">
+                                {/* 时间线圆点 */}
+                                <div className="absolute -left-9 top-2 w-4 h-4 rounded-full bg-purple-500 border-4 border-gray-800"></div>
 
-                                                {itinerary.image_url && (
-                                                    <img
-                                                        src={itinerary.image_url}
-                                                        alt={itinerary.activity}
-                                                        className="rounded-lg mt-3 w-[80%] mx-0 object-cover max-h-56"
-                                                    />
-                                                )}
-                                            </div>
-                                        </div>
+                                <div className="bg-gray-700 rounded-lg p-4 w-[90%] mx-auto">
+                                {/* 活动标题 + 时间 */}
+                                <div className="flex justify-between items-start mb-2">
+                                    <h4 className="text-white font-semibold text-base">
+                                    {itinerary.activity}
+                                    </h4>
 
-                                        {/* 分隔线 */}
-                                        {index < daily_itinerary.length - 1 && (
-                                            <div className="my-8 border-t border-gray-600"></div>
-                                        )}
+                                    <div className="flex items-center text-gray-400 text-sm bg-gray-600 px-2 py-1 rounded w-fit ml-2">
+                                    <span>🕒</span>
+                                    <span className="ml-1">
+                                        {itinerary.start_time} - {itinerary.end_time}
+                                    </span>
                                     </div>
-                                );
-                            })
-                        ) : (
-                            <p className="text-gray-400 italic">No itinerary data available.</p>
-                        )}
+                                </div>
+
+                                {/* 新增活动描述 */}
+                                {itinerary.activity_description && (
+                                    <p className="text-gray-300 text-sm mt-2 leading-relaxed">
+                                    {itinerary.activity_description}
+                                    </p>
+                                )}
+
+                                {/* 新增费用 */}
+                                {itinerary.activity_cost && (
+                                    <p className="text-gray-300 text-sm mt-2">
+                                    💰 <span className="font-medium">{itinerary.activity_cost} HKD</span>
+                                    </p>
+                                )}
+
+                                {/* 新增交通方式（如果开头不是 '0' 才显示） */}
+                                {itinerary.activity_transport &&
+                                    !itinerary.activity_transport.startsWith("0") && (
+                                    <p className="text-gray-300 text-sm mt-2">
+                                        🚗 <span className="font-medium">{itinerary.activity_transport}</span>
+                                    </p>
+                                    )
+                                }
+
+                                {/* 图片 */}
+                                {itinerary.image_url && (
+                                    <img
+                                    src={itinerary.image_url}
+                                    alt={itinerary.activity}
+                                    className="rounded-lg mt-3 w-[80%] mx-0 object-cover max-h-56"
+                                    />
+                                )}
+                                </div>
+                            </div>
+
+                            {/* 分隔线 */}
+                            {index < daily_itinerary.length - 1 && (
+                                <div className="my-8 border-t border-gray-600"></div>
+                            )}
+                            </div>
+                        );
+                        })
+                    ) : (
+                        <p className="text-gray-400 italic">No itinerary data available.</p>
+                    )}
                     </div>
                 </div>
             </main>

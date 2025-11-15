@@ -32,6 +32,9 @@ class DailyItinerary(BaseModel):
     start_time:str
     end_time:str
     activity:str
+    activity_description:str
+    activity_cost:str
+    activity_transport:str
     image_url:str
 
 class DailyItineraryResponse(BaseModel):
