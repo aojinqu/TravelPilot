@@ -44,7 +44,7 @@ const LocationSearch = ({ locationType = "destination" }) => {
             );
 
             if (!response.ok) {
-                throw new Error('搜索失败');
+                throw new Error('Search failed');
             }
 
             const data = await response.json();
@@ -59,7 +59,7 @@ const LocationSearch = ({ locationType = "destination" }) => {
 
             setSuggestions(formattedSuggestions);
         } catch (err) {
-            setError('搜索失败，请稍后重试');
+            setError('Search failed, please try again later');
             console.error('Location search error:', err);
         } finally {
             setIsLoading(false);
@@ -78,7 +78,7 @@ const LocationSearch = ({ locationType = "destination" }) => {
         });
         setQuery("");
         setSuggestions([]);
-        console.log(`${locationType} 已更新: ${cityName}`);
+        console.log(`${locationType} updated: ${cityName}`);
     };
 
     // 从完整地址中提取城市名
@@ -105,7 +105,7 @@ const LocationSearch = ({ locationType = "destination" }) => {
             <div className="relative">
                 <input
                     type="text"
-                    placeholder={`搜索${locationType === 'departure' ? '出发地' : '目的地'}...`}
+                    placeholder={`Search ${locationType === 'departure' ? 'departure' : 'destination'}...`}
                     className="w-full px-3 py-2 bg-gray-700 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}

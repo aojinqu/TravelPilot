@@ -73,7 +73,7 @@ const PassengerSelector = () => {
         <div className="p-4 space-y-4">
             {/* 显示当前全局状态 */}
             <div className="text-sm text-gray-400">
-                当前设置: {total} 人
+                Current setting: {total} people
             </div>
 
             {/* 乘客选择器 */}
@@ -104,11 +104,11 @@ const PassengerSelector = () => {
             {/* 总计 */}
             <div className="border-t border-gray-700 pt-4">
                 <div className="flex justify-between items-center">
-                    <span className="text-white font-medium">总计</span>
-                    <span className="text-white font-bold">{total} 人</span>
+                    <span className="text-white font-medium">Total</span>
+                    <span className="text-white font-bold">{total} people</span>
                 </div>
                 <p className="text-xs text-gray-400 text-center mt-2">
-                    乘客数量已自动保存
+                    Passenger count has been automatically saved
                 </p>
             </div>
         </div>

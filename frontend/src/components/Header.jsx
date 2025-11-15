@@ -62,7 +62,7 @@ const Header = () => {
                                     if (!tripOverview) missing.push('tripOverview');
                                     if (!flights || flights.length === 0) missing.push('flights');
                                     if (!hotels || hotels.length === 0) missing.push('hotels');
-                                    alert(`警告：数据不完整，缺少：${missing.join(', ')}。是否仍要保存？`);
+                                    alert(`Warning: Incomplete data, missing: ${missing.join(', ')}. Do you still want to save?`);
                                 }
 
                                 const response = await fetch('http://localhost:8000/api/plans/save', {
@@ -78,13 +78,13 @@ const Header = () => {
                                 console.log('保存结果:', result);
 
                                 if (result.success) {
-                                    alert('计划保存成功！');
+                                    alert('Plan saved successfully!');
                                 } else {
-                                    alert('保存失败：' + (result.message || '未知错误'));
+                                    alert('Save failed: ' + (result.message || 'Unknown error'));
                                 }
                             } catch (error) {
                                 console.error('保存计划失败:', error);
-                                alert('保存失败，请稍后重试');
+                                alert('Save failed, please try again later');
                             }
                         }}
                         className="flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg shadow-lg transition-colors duration-200"
@@ -127,15 +127,11 @@ const Header = () => {
                             }}
                             className="px-3 py-1 text-sm bg-gray-700 hover:bg-gray-600 rounded text-gray-300"
                         >
-                            登出
+                            Logout
                         </button>
                     </div>
                 )}
 
-                <button className="flex items-center px-6 py-2 bg-[#8965F2] hover:bg-purple-700 text-white font-medium rounded-lg shadow-lg transition-colors duration-200">
-                    To Calendar
-                    <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
-                </button>
             </div>
         </header>
     );

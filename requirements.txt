@@ -14,5 +14,5 @@ isodate~=0.7.2
 google-api-python-client~=2.187.0
 supabase
 google-auth
-httpx
-python-dotenv
+certifi
+websockets>=12.0

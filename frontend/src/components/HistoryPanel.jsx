@@ -25,7 +25,7 @@ const HistoryPanel = ({ onSelectPlan, onClose }) => {
             });
 
             if (!response.ok) {
-                throw new Error('获取历史记录失败');
+                throw new Error('Failed to fetch history');
             }
 
             const result = await response.json();
@@ -33,7 +33,7 @@ const HistoryPanel = ({ onSelectPlan, onClose }) => {
                 setPlans(result.plans || []);
             }
         } catch (err) {
-            console.error('加载历史记录失败:', err);
+            console.error('Failed to load history:', err);
             setError(err.message);
         } finally {
             setLoading(false);
@@ -50,7 +50,7 @@ const HistoryPanel = ({ onSelectPlan, onClose }) => {
             });
 
             if (!response.ok) {
-                throw new Error('获取计划详情失败');
+                throw new Error('Failed to fetch plan details');
             }
 
             const result = await response.json();
@@ -105,15 +105,15 @@ const HistoryPanel = ({ onSelectPlan, onClose }) => {
                 }
             }
         } catch (err) {
-            console.error('加载计划详情失败:', err);
-            alert('加载计划失败：' + err.message);
+            console.error('Failed to load plan details:', err);
+            alert('Failed to load plan: ' + err.message);
         }
     };
 
     const handleDeletePlan = async (planId, e) => {
         e.stopPropagation(); // 阻止触发选择事件
         
-        if (!window.confirm('确定要删除这条旅游计划吗？')) {
+        if (!window.confirm('Are you sure you want to delete this travel plan?')) {
             return;
         }
 
@@ -126,14 +126,14 @@ const HistoryPanel = ({ onSelectPlan, onClose }) => {
             });
 
             if (!response.ok) {
-                throw new Error('删除失败');
+                throw new Error('Delete failed');
             }
 
             // 重新加载列表
             loadPlans();
         } catch (err) {
-            console.error('删除计划失败:', err);
-            alert('删除失败：' + err.message);
+            console.error('Failed to delete plan:', err);
+            alert('Delete failed: ' + err.message);
         }
     };
 
@@ -141,7 +141,7 @@ const HistoryPanel = ({ onSelectPlan, onClose }) => {
         if (!dateString) return '';
         try {
             const date = new Date(dateString);
-            return date.toLocaleDateString('zh-CN', {
+            return date.toLocaleDateString('en-US', {
                 year: 'numeric',
                 month: 'short',
                 day: 'numeric'
@@ -155,14 +155,14 @@ const HistoryPanel = ({ onSelectPlan, onClose }) => {
         return (
             <div className="w-96 min-w-[384px] bg-gradient-to-b from-[#2A1643] to-[#3A1E5C] flex flex-col border-r border-gray-700 p-4">
                 <div className="text-center text-gray-400 mt-8">
-                    <p className="text-sm mb-4">请先登录以查看历史记录</p>
+                    <p className="text-sm mb-4">Please login to view history</p>
                     <button
                         onClick={() => {
                             window.location.href = 'http://localhost:8000/api/auth/google';
                         }}
                         className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
                     >
-                        登录
+                        Login
                     </button>
                 </div>
             </div>
@@ -173,7 +173,7 @@ const HistoryPanel = ({ onSelectPlan, onClose }) => {
         <div className="w-96 min-w-[384px] bg-gradient-to-b from-[#2A1643] to-[#3A1E5C] flex flex-col border-r border-gray-700">
             {/* 标题栏 */}
             <div className="p-4 border-b border-gray-700 flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-white">历史记录</h2>
+                <h2 className="text-lg font-semibold text-white">History</h2>
                 <button
                     onClick={onClose}
                     className="text-gray-400 hover:text-white transition-colors"
@@ -189,7 +189,7 @@ const HistoryPanel = ({ onSelectPlan, onClose }) => {
                 {loading ? (
                     <div className="text-center text-gray-400 mt-8">
                         <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-                        <p className="mt-2">加载中...</p>
+                        <p className="mt-2">Loading...</p>
                     </div>
                 ) : error ? (
                     <div className="text-center text-red-400 mt-8">
@@ -198,13 +198,13 @@ const HistoryPanel = ({ onSelectPlan, onClose }) => {
                             onClick={loadPlans}
                             className="mt-4 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-white"
                         >
-                            重试
+                            Retry
                         </button>
                     </div>
                 ) : plans.length === 0 ? (
                     <div className="text-center text-gray-400 mt-8">
-                        <p className="text-sm">暂无历史记录</p>
-                        <p className="text-xs mt-2 text-gray-500">生成计划后可以保存到历史记录</p>
+                        <p className="text-sm">No history available</p>
+                        <p className="text-xs mt-2 text-gray-500">Plans can be saved to history after generation</p>
                     </div>
                 ) : (
                     <div className="space-y-3">
@@ -217,17 +217,17 @@ const HistoryPanel = ({ onSelectPlan, onClose }) => {
                                 <div className="flex items-start justify-between">
                                     <div className="flex-1">
                                         <h3 className="text-white font-semibold mb-1">
-                                            {plan.title || plan.destination || '未命名计划'}
+                                            {plan.title || plan.destination || 'Untitled Plan'}
                                         </h3>
                                         <div className="text-sm text-gray-400 space-y-1">
                                             {plan.destination && (
-                                                <p>目的地: {plan.destination}</p>
+                                                <p>Destination: {plan.destination}</p>
                                             )}
                                             {plan.departure && (
-                                                <p>出发地: {plan.departure}</p>
+                                                <p>Departure: {plan.departure}</p>
                                             )}
                                             {plan.num_days && (
-                                                <p>{plan.num_days} 天 · {plan.num_people || 1} 人</p>
+                                                <p>{plan.num_days} days · {plan.num_people || 1} people</p>
                                             )}
                                             {plan.created_at && (
                                                 <p className="text-xs text-gray-500">
@@ -239,7 +239,7 @@ const HistoryPanel = ({ onSelectPlan, onClose }) => {
                                     <button
                                         onClick={(e) => handleDeletePlan(plan.id, e)}
                                         className="ml-2 text-red-400 hover:text-red-300 transition-colors p-1"
-                                        title="删除"
+                                        title="Delete"
                                     >
                                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
