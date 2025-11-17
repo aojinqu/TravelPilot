@@ -1,11 +1,7 @@
 // components/Header.jsx
 
 import { useTravel } from '../context/TravelContext';
-<<<<<<< HEAD
 import { useAuth } from '../context/AuthContext';
-=======
-import {useAuth} from "../context/AuthContext";
->>>>>>> origin/YU-HAOGUANG
 
 const Header = () => {
     const { tripOverview, priceSummary, travelInfo, flights, hotels, daily_itinerary} = useTravel();

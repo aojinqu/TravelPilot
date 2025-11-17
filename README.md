@@ -17,7 +17,7 @@
     - **Google Maps API Key**: 从 [Google Cloud Console](https://console.cloud.google.com/apis/credentials) 获取 （新增：需要在API限制中加入YouTube Data API v3 和 Custom Search API）
     - **Google Search Engine ID**: 从 [Google Console](https://cse.google.com/controlpanel/all)获取 （新增）
 
-2. **Python 3.8+**: 确保已安装 Python 3.8 或更高版本
+2. **Python 3.10+**: 确保已安装 Python 3.10 或更高版本
 
 3. **Node.js 16+**: 用于运行 React 前端（建议使用 npm 或 yarn）
 
