@@ -1,7 +1,11 @@
 // components/Header.jsx
 
 import { useTravel } from '../context/TravelContext';
+<<<<<<< HEAD
 import { useAuth } from '../context/AuthContext';
+=======
+import {useAuth} from "../context/AuthContext";
+>>>>>>> origin/YU-HAOGUANG
 
 const Header = () => {
     const { tripOverview, priceSummary, travelInfo, flights, hotels, daily_itinerary} = useTravel();
@@ -47,10 +51,10 @@ const Header = () => {
                     <span className="block text-sm text-gray-400">Total (per adult)</span>
                     <span className="text-xl font-semibold text-gray-200">{totalPrice}</span>
                 </div>
-                
+
                 {/* Save Plan 按钮 */}
                 {isAuthenticated && tripOverview && (
-                    <button 
+                    <button
                         onClick={async () => {
                             try {
                                 const planData = {
@@ -68,7 +72,7 @@ const Header = () => {
                                     price_summary: priceSummary,
                                     daily_itinerary: daily_itinerary || []
                                 };
-                                
+
                                 // 调试：打印保存的数据
                                 console.log('准备保存的计划数据:', planData);
                                 console.log('tripOverview:', tripOverview);
@@ -76,7 +80,7 @@ const Header = () => {
                                 console.log('hotels:', hotels);
                                 console.log('priceSummary:', priceSummary);
                                 console.log('daily_itinerary:', daily_itinerary);
-                                
+
                                 // 验证数据完整性
                                 if (!tripOverview || !flights || flights.length === 0 || !hotels || hotels.length === 0) {
                                     const missing = [];
@@ -85,7 +89,7 @@ const Header = () => {
                                     if (!hotels || hotels.length === 0) missing.push('hotels');
                                     alert(`警告：数据不完整，缺少：${missing.join(', ')}。是否仍要保存？`);
                                 }
-                                
+
                                 const response = await fetch('http://localhost:8000/api/plans/save', {
                                     method: 'POST',
                                     headers: {
@@ -116,10 +120,10 @@ const Header = () => {
                         Save Plan
                     </button>
                 )}
-                
+
                 {/* Login 按钮 */}
                 {!isAuthenticated ? (
-                    <button 
+                    <button
                         onClick={() => {
                             window.location.href = 'http://localhost:8000/api/auth/google';
                         }}
@@ -133,14 +137,14 @@ const Header = () => {
                 ) : (
                     <div className="flex items-center space-x-2">
                         {user.picture && (
-                            <img 
-                                src={user.picture} 
-                                alt={user.name} 
+                            <img
+                                src={user.picture}
+                                alt={user.name}
                                 className="w-8 h-8 rounded-full"
                             />
                         )}
                         <span className="text-sm text-gray-300">{user.name || user.email}</span>
-                        <button 
+                        <button
                             onClick={() => {
                                 localStorage.removeItem('auth_token');
                                 localStorage.removeItem('user_info');
@@ -152,7 +156,7 @@ const Header = () => {
                         </button>
                     </div>
                 )}
-                
+
                 <button className="flex items-center px-6 py-2 bg-[#8965F2] hover:bg-purple-700 text-white font-medium rounded-lg shadow-lg transition-colors duration-200">
                     To Calendar
                     <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
