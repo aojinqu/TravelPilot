@@ -1,25 +1,69 @@
 // components/MainContent.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTravel } from '../context/TravelContext';
 import AddInspiration from './AddInspiration';
+import XiaohongshuContent from './XiaohongshuContent';
 
 const MainContent = () => {
-    const { tripOverview, daily_itinerary, flights, hotels, priceSummary, itinerary } = useTravel();
+    const { tripOverview, daily_itinerary, flights, hotels, priceSummary, itinerary, travelInfo } = useTravel();
     const [showFullItinerary, setShowFullItinerary] = useState(false);
     const [showInspiration, setShowInspiration] = useState(false);
+    const [showXiaohongshu, setShowXiaohongshu] = useState(false);
+    const [hasAutoShownXhs, setHasAutoShownXhs] = useState(false); // 跟踪是否已经自动显示过
+    const lastTripTitleRef = useRef(null); // 跟踪上一次的行程标题
+
+    // 当生成新的行程时，重置自动显示标志
+    useEffect(() => {
+        const currentTitle = tripOverview?.title;
+        // 如果标题变化了（新行程），重置标志
+        if (currentTitle && currentTitle !== lastTripTitleRef.current) {
+            setHasAutoShownXhs(false);
+            lastTripTitleRef.current = currentTitle;
+        }
+    }, [tripOverview?.title]);
+
+    // 当生成行程后，如果用户选择了preference，自动显示小红书内容
+    useEffect(() => {
+        // 检查是否有行程数据且用户选择了preference，且还没有自动显示过
+        if (tripOverview && travelInfo.vibes && travelInfo.vibes.length > 0 && !hasAutoShownXhs) {
+            setShowXiaohongshu(true);
+            setHasAutoShownXhs(true);
+        }
+    }, [tripOverview, travelInfo.vibes, hasAutoShownXhs]);
 
     const handleDownloadCalendar = async () => {
-        if (!itinerary) return;
+        // 检查是否有可用的行程数据
+        if (!daily_itinerary || daily_itinerary.length === 0) {
+            alert('没有可用的行程数据，请先生成行程');
+            return;
+        }
 
         try {
+            // 解析开始日期
+            let startDate = new Date().toISOString();
+            if (tripOverview?.date_range) {
+                const dateStr = tripOverview.date_range.split(' - ')[0];
+                try {
+                    // 尝试解析日期格式，例如 "Mon Feb 05 2024"
+                    const parsedDate = new Date(dateStr);
+                    if (!isNaN(parsedDate.getTime())) {
+                        startDate = parsedDate.toISOString();
+                    }
+                } catch (e) {
+                    console.warn('无法解析日期，使用当前日期');
+                }
+            }
+
+            // 发送结构化的 daily_itinerary 数据
             const response = await fetch('http://localhost:8000/api/download-calendar', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    itinerary: itinerary,
-                    start_date: tripOverview?.date_range?.split(' - ')[0] || new Date().toISOString(),
+                    daily_itinerary: daily_itinerary,
+                    trip_overview: tripOverview,
+                    start_date: startDate,
                 }),
             });
 
@@ -58,11 +102,22 @@ const MainContent = () => {
     const handleViewInspiration = () => {
         setShowInspiration(true);
         setShowFullItinerary(false);
+        setShowXiaohongshu(false);
     };
 
     // 关闭灵感页面
     const handleCloseInspiration = () => {
         setShowInspiration(false);
+    };
+
+    // 切换显示小红书内容（在主内容区域）
+    const handleToggleXiaohongshu = () => {
+        const newState = !showXiaohongshu;
+        setShowXiaohongshu(newState);
+        // 如果用户手动关闭，标记为已处理，避免自动重新打开
+        if (!newState) {
+            setHasAutoShownXhs(true);
+        }
     };
 
     // 如果显示完整行程页面（全屏）
@@ -82,7 +137,7 @@ const MainContent = () => {
                     </button>
                     <button
                         onClick={handleDownloadCalendar}
-                        disabled={!itinerary}
+                        disabled={!daily_itinerary || daily_itinerary.length === 0}
                         className="flex items-center px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -97,57 +152,85 @@ const MainContent = () => {
                     <h1 className="text-2xl font-bold mb-6 text-white">{tripOverview?.title || "Travel Itinerary"}</h1>
 
                     {/* 使用后端数据渲染每日行程 */}
+                    {/* 使用后端数据渲染每日行程 */}
                     <div className="space-y-8">
-                        {daily_itinerary && daily_itinerary.length > 0 ? (
-                            daily_itinerary.map((dayItem, index) => {
-                                const { day, itinerary } = dayItem;
-                                return (
-                                    <div key={index} className="border-l-2 border-purple-500 pl-6 relative">
-                                        {/* 日期标题 */}
-                                        <div className="mb-4">
-                                            <h3 className="text-lg font-bold text-white">
-                                                Day {day}
-                                            </h3>
-                                        </div>
+                    {daily_itinerary && daily_itinerary.length > 0 ? (
+                        daily_itinerary.map((dayItem, index) => {
+                        const { day, itinerary } = dayItem;
 
-                                        {/* 活动卡片 */}
-                                        <div className="relative">
-                                            {/* 时间线圆点 */}
-                                            <div className="absolute -left-9 top-2 w-4 h-4 rounded-full bg-purple-500 border-4 border-gray-800"></div>
+                        return (
+                            <div key={index} className="border-l-2 border-purple-500 pl-6 relative">
+                            {/* 日期标题 */}
+                            <div className="mb-4">
+                                <h3 className="text-lg font-bold text-white">
+                                Day {day}
+                                </h3>
+                            </div>
 
-                                            <div className="bg-gray-700 rounded-lg p-4 w-[90%] mx-auto">
-                                                <div className="flex justify-between items-start mb-2">
-                                                    <h4 className="text-white font-semibold text-base">
-                                                        {itinerary.activity}
-                                                    </h4>
-                                                    <div className="flex items-center text-gray-400 text-sm bg-gray-600 px-2 py-1 rounded w-fit ml-2">
-                                                        <span>🕒</span>
-                                                        <span className="ml-1">
-                                                            {itinerary.start_time} - {itinerary.end_time}
-                                                        </span>
-                                                    </div>
-                                                </div>
+                            {/* 活动卡片 */}
+                            <div className="relative">
+                                {/* 时间线圆点 */}
+                                <div className="absolute -left-9 top-2 w-4 h-4 rounded-full bg-purple-500 border-4 border-gray-800"></div>
 
-                                                {itinerary.image_url && (
-                                                    <img
-                                                        src={itinerary.image_url}
-                                                        alt={itinerary.activity}
-                                                        className="rounded-lg mt-3 w-[80%] mx-0 object-cover max-h-56"
-                                                    />
-                                                )}
-                                            </div>
-                                        </div>
+                                <div className="bg-gray-700 rounded-lg p-4 w-[90%] mx-auto">
+                                {/* 活动标题 + 时间 */}
+                                <div className="flex justify-between items-start mb-2">
+                                    <h4 className="text-white font-semibold text-base">
+                                    {itinerary.activity}
+                                    </h4>
 
-                                        {/* 分隔线 */}
-                                        {index < daily_itinerary.length - 1 && (
-                                            <div className="my-8 border-t border-gray-600"></div>
-                                        )}
+                                    <div className="flex items-center text-gray-400 text-sm bg-gray-600 px-2 py-1 rounded w-fit ml-2">
+                                    <span>🕒</span>
+                                    <span className="ml-1">
+                                        {itinerary.start_time} - {itinerary.end_time}
+                                    </span>
                                     </div>
-                                );
-                            })
-                        ) : (
-                            <p className="text-gray-400 italic">No itinerary data available.</p>
-                        )}
+                                </div>
+
+                                {/* 新增活动描述 */}
+                                {itinerary.activity_description && (
+                                    <p className="text-gray-300 text-sm mt-2 leading-relaxed">
+                                    {itinerary.activity_description}
+                                    </p>
+                                )}
+
+                                {/* 新增费用 */}
+                                {itinerary.activity_cost && (
+                                    <p className="text-gray-300 text-sm mt-2">
+                                    💰 <span className="font-medium">{itinerary.activity_cost} HKD</span>
+                                    </p>
+                                )}
+
+                                {/* 新增交通方式（如果开头不是 '0' 才显示） */}
+                                {itinerary.activity_transport &&
+                                    !itinerary.activity_transport.startsWith("0") && (
+                                    <p className="text-gray-300 text-sm mt-2">
+                                        🚗 <span className="font-medium">{itinerary.activity_transport}</span>
+                                    </p>
+                                    )
+                                }
+
+                                {/* 图片 */}
+                                {itinerary.image_url && (
+                                    <img
+                                    src={itinerary.image_url}
+                                    alt={itinerary.activity}
+                                    className="rounded-lg mt-3 w-[80%] mx-0 object-cover max-h-56"
+                                    />
+                                )}
+                                </div>
+                            </div>
+
+                            {/* 分隔线 */}
+                            {index < daily_itinerary.length - 1 && (
+                                <div className="my-8 border-t border-gray-600"></div>
+                            )}
+                            </div>
+                        );
+                        })
+                    ) : (
+                        <p className="text-gray-400 italic">No itinerary data available.</p>
+                    )}
                     </div>
                 </div>
             </main>
@@ -172,10 +255,23 @@ const MainContent = () => {
                 </div>
             )}
 
-            {/* 主内容区域 - 根据是否显示灵感页面调整透明度 */}
+            {/* 主内容区域 - 根据是否显示侧边页面调整透明度 */}
             <div className={`transition-all duration-300 ${showInspiration ? 'opacity-30 pointer-events-none' : 'opacity-100'}`}>
                 {/* 顶部按钮 */}
                 <div className="flex justify-end space-x-3 mb-6">
+                    <button
+                        onClick={handleToggleXiaohongshu}
+                        className={`flex items-center px-4 py-2 rounded-lg transition-colors duration-200 ${
+                            showXiaohongshu 
+                                ? 'bg-red-600 text-white' 
+                                : 'bg-gray-800 text-red-400 hover:bg-gray-700'
+                        }`}
+                    >
+                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                        </svg>
+                        preferences in rednote
+                    </button>
                     <button
                         onClick={handleViewInspiration}
                         className="flex items-center px-4 py-2 bg-gray-800 text-purple-400 rounded-lg hover:bg-gray-700 transition-colors duration-200"
@@ -187,18 +283,11 @@ const MainContent = () => {
                     </button>
                     <button
                         onClick={handleDownloadCalendar}
-                        disabled={!itinerary}
+                        disabled={!daily_itinerary || daily_itinerary.length === 0}
                         className="flex items-center px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.102 1.101m-4.242 0a2 2 0 010 2.828l.707.707"></path></svg>
                         Download Calendar
-                    </button>
-                    <button
-                        onClick={handleViewFullPlan}
-                        className="flex items-center px-4 py-2 bg-[#8965F2] text-white rounded-lg hover:bg-purple-700 transition-colors duration-200"
-                    >
-                        Full Itinerary
-                        <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
                     </button>
                 </div>
 
@@ -247,8 +336,8 @@ const MainContent = () => {
                 {/* 如果没有数据，显示提示 */}
                 {!tripOverview && !flights.length && !hotels.length && (
                     <div className="bg-gray-800 rounded-xl p-12 shadow-lg text-center">
-                        <p className="text-gray-400 text-lg mb-4">暂无行程数据</p>
-                        <p className="text-gray-500 text-sm">请在左侧输入框中输入您的旅行需求，开始规划您的行程</p>
+                        <p className="text-gray-400 text-lg mb-4">No itinerary data available</p>
+                        <p className="text-gray-500 text-sm">Please enter your travel requirements in the input box on the left to start planning your trip</p>
                     </div>
                 )}
 
@@ -352,6 +441,11 @@ const MainContent = () => {
                             })}
                         </div>
                     </div>
+                )}
+
+                {/* 小红书推荐卡片 */}
+                {showXiaohongshu && (
+                    <XiaohongshuContent onBack={handleToggleXiaohongshu} />
                 )}
             </div>
         </main>

@@ -74,16 +74,15 @@ function App() {
                 {/* 右侧主内容区 */}
                 <div className="flex-1 flex flex-col">
                     <Header />
-                    
                     {/* 根据当前视图渲染不同内容 */}
                     {currentView === 'overview' && (
-                        <MainContent 
+                        <MainContent
                             onViewFullPlan={handleViewFullPlan}
                         />
                     )}
-                    
+
                     {currentView === 'itinerary' && tripData && (
-                        <ItineraryDetail 
+                        <ItineraryDetail
                             dailyItinerary={tripData.daily_itinerary}
                             tripOverview={tripData.tripOverview}
                             flights={tripData.flights}

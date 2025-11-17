@@ -63,12 +63,12 @@ const VideoPreviewModal = ({post, onClose, onAddToTrip}) => {
                             className="w-full h-4/5 object-cover"
                         />
                         <div className="absolute bottom-4 left-4 right-4 bg-black bg-opacity-70 p-4 rounded-lg">
-                            <p className="text-white text-sm mb-2">无法嵌入 TikTok 视频</p>
+                            <p className="text-white text-sm mb-2">Unable to embed TikTok video</p>
                             <button
                                 onClick={() => window.open(post.video_url, '_blank')}
                                 className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded transition-colors"
                             >
-                                在 TikTok 上观看
+                                Watch on TikTok
                             </button>
                         </div>
                     </div>
@@ -105,12 +105,12 @@ const VideoPreviewModal = ({post, onClose, onAddToTrip}) => {
                             className="w-full h-4/5 object-cover"
                         />
                         <div className="absolute bottom-4 left-4 right-4 bg-black bg-opacity-70 p-4 rounded-lg">
-                            <p className="text-white text-sm mb-2">不支持的 TikTok 链接格式</p>
+                            <p className="text-white text-sm mb-2">Unsupported TikTok link format</p>
                             <button
                                 onClick={() => window.open(post.video_url, '_blank')}
                                 className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded transition-colors"
                             >
-                                在 TikTok 上观看
+                                Watch on TikTok
                             </button>
                         </div>
                     </div>
@@ -256,7 +256,7 @@ const getTikTokEmbedUrl = (url) => {
         }
         return null;
     } catch (error) {
-        console.error('生成 TikTok 嵌入URL时出错:', error);
+        console.error('Error generating TikTok embed URL:', error);
         return null;
     }
 };
