@@ -51,6 +51,7 @@ def configure_ssl():
     os.environ['HTTPS_PROXY'] = "http://127.0.0.1:15236"
     print(f"🔐 SSL 证书已配置: {cert_path}")
 
+temp_output=""
 
 load_dotenv()
 # configure_ssl() # 解决 Mac Python SSL证书环境配置问题
@@ -517,8 +518,10 @@ async def progress_stream(request_id: str):
     )
 
 
-async def run_mcp_travel_planner(destination: str, num_days: int, num_people: int, budget: int, openai_key: str, google_maps_key: str,request_id: str = None):
+async def run_mcp_travel_planner(destination: str, num_days: int, num_people: int, budget: int, openai_key: str, 
+                                google_maps_key: str, first_complete_flag: int, user_new_requirements: str, request_id: str = None):
     """Run the MCP-based travel planner agent with real-time data access."""
+    global temp_output
     # for test 
     print("@@@@@@@@@@@@@@@@  Start  @@@@@@@@@@@@@@@@@@@@@@@@")
     try:
@@ -558,15 +561,29 @@ async def run_mcp_travel_planner(destination: str, num_days: int, num_people: in
         )
         print("Success create Agent")
 
-        with open('./prompt.md', "r", encoding="utf-8") as f:
-            prompt_template = f.read()
-
-        prompt = prompt_template.format(
-            destination=destination,
-            num_days=num_days,
-            num_people=num_people,
-            budget=budget
-        )
+        # 根据标志选择模板并处理不同参数
+        if first_complete_flag == 0:
+            # 使用 prompt.md，需要基础行程参数
+            with open('./prompt.md', "r", encoding="utf-8") as f:
+                prompt_template = f.read()
+            prompt = prompt_template.format(
+                destination=destination,
+                num_days=num_days,
+                num_people=num_people,
+                budget=budget
+            )
+        else:
+            # 使用 change.md，需要用户新需求和原始行程参数
+            with open('./change.md', "r", encoding="utf-8") as f:
+                prompt_template = f.read()
+            prompt = prompt_template.format(
+                user_new_requirements=user_new_requirements,
+                destination=destination,
+                num_days=num_days,
+                num_people=num_people,
+                budget=budget,
+                temp_output=temp_output
+            )
 
         response = await travel_planner.arun(prompt)
 
@@ -576,8 +593,14 @@ async def run_mcp_travel_planner(destination: str, num_days: int, num_people: in
             await progress_manager.add_progress(request_id,
                                                 f"{num_days} full days to explore {destination}'s iconic spots andhidden gems.",
                                                 "detail")
-
-        return response.content
+        
+        print(response.content)
+        start_index = response.content.find('{')
+        end_index = response.content.rfind('}')
+        json_str = response.content[start_index:end_index + 1]
+        temp_output=json_str
+        print(json_str)
+        return json_str
 
     finally:
         await mcp_tools.close()
@@ -587,7 +610,7 @@ async def root():
     return {"message": "MCP AI Travel Planner API"}
 
 
-async def generate_itinerary(request: TravelPlanRequest, request_id: str = None):
+async def generate_itinerary(request: TravelPlanRequest, user_new_requirements: str, first_complete_flag: int, request_id: str = None):
 
     """
     生成旅行行程
@@ -602,7 +625,9 @@ async def generate_itinerary(request: TravelPlanRequest, request_id: str = None)
             budget=request.budget,
             openai_key=openai_key,
             google_maps_key=googlemap_key,
-            request_id=request_id
+            request_id=request_id,
+            first_complete_flag=first_complete_flag,
+            user_new_requirements=user_new_requirements,
         )
 
         return {
@@ -756,6 +781,12 @@ async def handle_chat(request: ChatRequest):
     flight_service = SimpleFlightService()
     travel_info = request.travel_info
 
+    user_new_requirements = ""
+    if request.chat_history and len(request.chat_history) > 0:
+        last_msg = request.chat_history[-1]
+        if last_msg.get("role") == "user":
+            user_new_requirements = last_msg.get("content", "")
+
     response = await generate_itinerary(
         TravelPlanRequest(
             destination=travel_info.destination,
@@ -764,7 +795,9 @@ async def handle_chat(request: ChatRequest):
             num_people=travel_info.num_people, 
             budget=travel_info.budget
         ),
-        request_id=request_id  # 传递请求ID
+        request_id=request_id,  # 传递请求ID
+        user_new_requirements=user_new_requirements,
+        first_complete_flag=request.first_complete_flag
     )
 
     itinerary_data = json.loads(response.get("itinerary", {}))

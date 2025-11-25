@@ -61,7 +61,9 @@ const ChatSider = () => {
         isLoading,
         chatMessages,
         travelInfo,
-        updateTravelInfo
+        updateTravelInfo,
+        firstCompleteFlag, 
+        setFirstCompleteFlag
     } = useTravel();
     
     const messagesEndRef = useRef(null);
@@ -225,7 +227,8 @@ const ChatSider = () => {
                         start_date: updatedTravelInfo.startDate,
                         end_date: updatedTravelInfo.endDate
                     },
-                    request_id: requestId
+                    request_id: requestId,
+                    first_complete_flag: firstCompleteFlag
                 }),
             });
 
@@ -235,6 +238,10 @@ const ChatSider = () => {
 
             const itineraryData = await response.json();
             console.log("收到后端数据:", itineraryData);
+
+            if (firstCompleteFlag === 0) {
+                setFirstCompleteFlag(1);
+            }
 
             // 使用后端返回的 request_id 开始监听进度
             if (itineraryData.request_id) {

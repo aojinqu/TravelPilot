@@ -13,6 +13,7 @@ const initialState = {
     chatMessages: [],
     isLoading: false,
     daily_itinerary: [],
+    firstCompleteFlag: 0, // 标志位：0-未完成首次完整输入，1-已完成
     // 旅行信息
     travelInfo: {
         departure: null,      // 出发地点
@@ -89,6 +90,14 @@ export const TravelProvider = ({ children }) => {
         }));
     };
 
+    // 更新标志位的方法
+    const setFirstCompleteFlag = (value) => {
+        setState(prevState => ({
+            ...prevState,
+            firstCompleteFlag: value
+        }));
+    };
+
     // 清除所有数据
     const clearData = () => {
         setState(initialState);
@@ -100,6 +109,7 @@ export const TravelProvider = ({ children }) => {
         addChatMessage,
         setLoading,
         updateTravelInfo,
+        setFirstCompleteFlag,
         clearData,
     };
 

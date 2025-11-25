@@ -18,6 +18,7 @@ class ChatRequest(BaseModel):
     chat_history: Optional[List[dict]] = None  # (可选) 用于上下文
     travel_info:Optional[TravelInfo] = None
     request_id:Optional[str]
+    first_complete_flag:int
 
 # --- 响应体 (与 UI 完全匹配) ---
 
