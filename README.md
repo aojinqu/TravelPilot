@@ -32,18 +32,19 @@
 
 ### 系统架构
 
-**Tools**: GPT 4o, Google Maps API, Airbnb MCP
+**MCP工具**: GPT 4o, Google Maps API, Airbnb MCP
 
-**Input**:Departure, destination,start/end date of the trip, travel duration, number of travelers, total budget, travel preference
+**输入**:Departure, destination,start/end date of the trip, travel duration, number of travelers, total budget, travel preference
 
-**Output**: 
+**输出**: 
 
 A JSON follows the structure with "trip_overview", "accommodation", "daily_itinerary", and "budget_breakdown".
 
-**Implementation Procedure**:
+**执行过程**:
 
-1. Receive user input and check if mandatory information (departure location, travel dates, travel duration) is complete; prompt the user to supplement if incomplete.
-2. Call GPT model with complete information, which invokes Google Maps API (for route planning) and Airbnb MCP API (for accommodation matching) to generate the structured JSON itinerary as specified.
+1. 接收用户输入，并检查是否已完整填写了必填信息（出发地点、出行日期、行程时长）；若信息不完整，则提示用户补充完整。
+
+2. 使用包含完整信息的 GPT 模型进行调用，该模型会调用谷歌地图 API（用于路线规划）和爱彼迎 MCP API（用于住宿匹配），以生成按照指定格式生成的结构化 JSON 旅行计划。
 
 ![Architect](./prompt/Architect.png)
 
@@ -116,5 +117,10 @@ python xhs.py
 4. 点击"🎯 生成行程"按钮创建详细的旅行计划
 5. （可选）点击"📅 下载为日历"导出 ICS 文件
 
-
+### 项目成员
+Yu Bohan                                   
+Ao Jiaqi 
+Su Yongchao                           
+Chen Zhenyan 
+Yu Haoguang 
 
