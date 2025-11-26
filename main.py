@@ -564,7 +564,7 @@ async def run_mcp_travel_planner(destination: str, num_days: int, num_people: in
         # 根据标志选择模板并处理不同参数
         if first_complete_flag == 0:
             # 使用 prompt.md，需要基础行程参数
-            with open('./prompt.md', "r", encoding="utf-8") as f:
+            with open('./prompt/prompt.md', "r", encoding="utf-8") as f:
                 prompt_template = f.read()
             prompt = prompt_template.format(
                 destination=destination,
@@ -574,7 +574,7 @@ async def run_mcp_travel_planner(destination: str, num_days: int, num_people: in
             )
         else:
             # 使用 change.md，需要用户新需求和原始行程参数
-            with open('./change.md', "r", encoding="utf-8") as f:
+            with open('./prompt/change.md', "r", encoding="utf-8") as f:
                 prompt_template = f.read()
             prompt = prompt_template.format(
                 user_new_requirements=user_new_requirements,

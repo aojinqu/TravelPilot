@@ -10,6 +10,43 @@
 - 📅 **日历导出**：将行程导出为 ICS 文件，可导入 Google Calendar、Apple Calendar 或 Outlook
 - ⚡ **现代化前端**：使用 React 构建的响应式用户界面
 
+**Trip Overview**
+
+![Trip Overview](./prompt/TripOverview.png)
+
+**Trip Detail**
+
+![Trip Detail](./prompt/TripDetail.png)
+
+**Flight Ticket**
+
+![Flight Ticket](./prompt/FlightTicket.png)
+
+**Social Media**
+
+![SocialMedia](./prompt/SocialMedia.png)
+
+**Preference**
+
+![Preference](./prompt/Preference.png)
+
+### 系统架构
+
+**Tools**: GPT 4o, Google Maps API, Airbnb MCP
+
+**Input**:Departure, destination,start/end date of the trip, travel duration, number of travelers, total budget, travel preference
+
+**Output**: 
+
+A JSON follows the structure with "trip_overview", "accommodation", "daily_itinerary", and "budget_breakdown".
+
+**Implementation Procedure**:
+
+1. Receive user input and check if mandatory information (departure location, travel dates, travel duration) is complete; prompt the user to supplement if incomplete.
+2. Call GPT model with complete information, which invokes Google Maps API (for route planning) and Airbnb MCP API (for accommodation matching) to generate the structured JSON itinerary as specified.
+
+![Architect](./prompt/Architect.png)
+
 ### 系统要求
 
 1. **API Keys** (两者都需要):
@@ -45,7 +82,7 @@ cd ..
 
 **终端 1 - 启动后端服务器：**
 ```bash
-python backend.py
+python main.py
 ```
 后端将在 http://localhost:8000 运行
 
@@ -78,24 +115,6 @@ python xhs.py
 3. 填写旅行信息（目的地、天数、预算、偏好等）
 4. 点击"🎯 生成行程"按钮创建详细的旅行计划
 5. （可选）点击"📅 下载为日历"导出 ICS 文件
-
-### 项目结构
-
-```
-final_project/
-├── backend.py          # FastAPI 后端服务器
-├── frontend/           # React 前端应用
-│   ├── src/
-│   │   ├── App.jsx     # 主应用组件
-│   │   └── ...
-│   └── package.json    # Node.js 依赖
-├── requirements.txt    # Python 依赖
-└── README.md          # 项目说明
-```
-
-### 详细设置说明
-
-请参考 [SETUP.md](./SETUP.md) 获取详细的设置和故障排除指南。
 
 
 

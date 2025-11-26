@@ -6,7 +6,7 @@
 
 ```
 final_project/
-├── backend.py          # FastAPI 后端服务器
+├── main.py          # FastAPI 后端服务器
 ├── frontend/           # React 前端应用
 │   ├── src/
 │   │   ├── App.jsx     # 主应用组件
@@ -42,7 +42,7 @@ cd ..
 #### 终端 1：启动后端服务器
 
 ```bash
-python backend.py
+python main.py
 ```
 
 后端服务器将在 http://localhost:8000 上运行。
@@ -116,7 +116,7 @@ uvicorn backend:app --reload --host 0.0.0.0 --port 8000
 
 ### CORS 错误
 - 确认后端和前端都正常运行
-- 检查 `backend.py` 中的 CORS 配置
+- 检查 `main.py` 中的 CORS 配置
 
 ### API 调用失败
 - 检查 API 密钥是否正确

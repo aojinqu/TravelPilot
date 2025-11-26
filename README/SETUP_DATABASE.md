@@ -68,7 +68,7 @@ CREATE POLICY "Allow all for service role"
 
 #### 启动后端
 ```bash
-python backend.py
+python main.py
 # 或
 uvicorn backend:app --reload --port 8000
 ```
