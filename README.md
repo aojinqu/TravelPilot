@@ -118,9 +118,13 @@ python xhs.py
 5. （可选）点击"📅 下载为日历"导出 ICS 文件
 
 ### 项目成员
-Yu Bohan                                   
-Ao Jiaqi 
-Su Yongchao                           
-Chen Zhenyan 
-Yu Haoguang 
+Yu Bohan 3036657328 
+
+Ao Jiaqi 3036654833
+
+Su Yongchao 3036659352 
+
+Chen Zhenyan 3036655526
+
+Yu Haoguang 3036659974
 
