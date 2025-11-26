@@ -51,7 +51,7 @@ python backend.py
 
 ```bash
 cd frontend
-npm run dev
+npm run dev # or: npm start
 ```
 
 前端应用将在 http://localhost:3000 上运行。
@@ -67,14 +67,16 @@ uvicorn backend:app --reload --host 0.0.0.0 --port 8000
 1. **打开浏览器**：访问 http://localhost:3000
 
 2. **配置 API 密钥**：
-   - 在左侧边栏输入您的 OpenAI API Key
-   - 输入您的 Google Maps API Key
+   - 在terminal或者env配置您的 OpenAI API Key
+   - 配置您的 Google Maps API Key
+   - 配置您的 Supabase API
 
 3. **填写旅行信息**：
+   - 出发地
    - 目的地
-   - 旅行天数
-   - 预算（USD）
    - 开始日期
+   - 结束日期
+   - 预算（HKD）
    - 旅行偏好
 
 4. **生成行程**：
