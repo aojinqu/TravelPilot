@@ -4,8 +4,8 @@ from models import Flight
 class SimpleFlightService:
     def __init__(self):
         self.amadeus = Client(
-            client_id='XbQXoT08PB3DyM1wGZhjlBSqN1tIBkAX',
-            client_secret='kB2xsvFwKO1opolV'
+            client_id='...',
+            client_secret='...'
         )
         self.airport_mapping = {
             '东京': 'HND', 
