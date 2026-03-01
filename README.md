@@ -94,7 +94,7 @@ npm run dev
 ```
 前端将在 http://localhost:3000 运行
 
-**终端 3 - 启动前端开发服务器：**
+**终端 3 - 启动小红书mcp(可选)：**
 
 ```bash
 npm install -g rednote-mind-mcp
@@ -118,13 +118,18 @@ python xhs.py
 5. （可选）点击"📅 下载为日历"导出 ICS 文件
 
 ### 项目成员
-Yu Bohan 3036657328 
+[Yu Bohan](https://github.com/PleasantTea) 
 
-Ao Jiaqi 3036654833
+[Ao Jiaqi](https://github.com/aojinqu)
 
-Su Yongchao 3036659352 
+[Su Yongchao](https://github.com/SYC135)
 
-Chen Zhenyan 3036655526
+[Chen Zhenyan ](https://github.com/zhenyeon)
 
-Yu Haoguang 3036659974
+[Yu Haoguang ](https://github.com/rhkdrhkd)
+ 
+
+
+
+
 
